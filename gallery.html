@@ -4,20 +4,16 @@ title: "Photo Gallery"
 permalink: /gallery/
 ---
 <h1>Photo Gallery</h1>
-<p>Welcome to my gallery. Click on an image to view it in full size.</p>
+<p>Welcome to my gallery.</p>
 
 <div class="gallery">
-  <figure>
-    <a href="{{ '/assets/images/photo1.jpg' | relative_url }}" target="_blank">
-      <img src="{{ '/assets/images/photo1_thumb.jpg' | relative_url }}" alt="Photo 1">
-    </a>
-    <figcaption>Caption for Photo 1</figcaption>
-  </figure>
-  <figure>
-    <a href="{{ '/assets/images/photo2.jpg' | relative_url }}" target="_blank">
-      <img src="{{ '/assets/images/photo2_thumb.jpg' | relative_url }}" alt="Photo 2">
-    </a>
-    <figcaption>Caption for Photo 2</figcaption>
-  </figure>
-  <!-- Add more figures for additional photos -->
+  {% assign gallery_images = site.static_files | where_exp:"file", "file.path contains '/assets/images/gallery'" %}
+  {% for image in gallery_images %}
+    {% if image.path contains '.jpg' or image.path contains '.png' or image.path contains '.gif' %}
+      <figure>
+        <img src="{{ image.path | relative_url }}" alt="{{ image.name }}">
+        <figcaption>{{ image.name }}</figcaption>
+      </figure>
+    {% endif %}
+  {% endfor %}
 </div>
