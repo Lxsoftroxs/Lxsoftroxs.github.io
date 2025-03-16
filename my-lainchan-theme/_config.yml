@@ -1,5 +1,0 @@
-# _config.yml
-title: "My Lainchan Blog"
-description: "A blog styled like Lainchan with a dark, neon vibe."
-baseurl: ""          # leave empty if the site is at the root URL
-url: "https://yourusername.github.io"  # change to your site URL
