@@ -1,13 +1,13 @@
 @echo off
 cd C:\Users\pshaw\Desktop\Lxsoftroxs.github.io
 
-REM Fetch and merge remote changes first
+REM Pull first to integrate any remote edits
 git pull origin main
 
-REM Copy converted HTML log from Desktop to repo logs folder
-copy "C:\Users\pshaw\Desktop\Lxsoftblogcomments.html" ".\logs\Lxsoftblogcomments.html"
+REM Run your Python conversion script
+C:\Python311\python.exe C:\Users\pshaw\Desktop\log2html.py
 
-REM Add, commit, and push
+REM Commit and push updated logs
 git add .
-git commit -m "Automated update of IRC log - %DATE%"
+git commit -m "Automated daily IRC logs update - %DATE%"
 git push origin main
