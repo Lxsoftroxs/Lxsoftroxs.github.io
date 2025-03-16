@@ -5,7 +5,7 @@ REM Pull first to integrate any remote edits
 git pull origin main
 
 REM Run your Python conversion script
-C:\Python311\python.exe C:\Users\pshaw\Desktop\log2html.py
+C:\Users\pshaw\AppData\Local\Programs\Python\Python313\python.exe C:\Users\pshaw\Desktop\log2html.py
 
 REM Commit and push updated logs
 git add .
