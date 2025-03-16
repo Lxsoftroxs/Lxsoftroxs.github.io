@@ -1,14 +1,15 @@
 <!-- _includes/post_comments.html -->
 
-<h3>Comments & Chat</h3>
+{% assign channel = page.slug %}
 
-<iframe 
-  src="https://kiwiirc.com/client/irc.libera.chat/#{{ page.channel_name }}"
-  style="border:0; width:100%; height:500px;">
+<h3>Chat About This Post</h3>
+<iframe
+  src="https://kiwiirc.com/client/irc.libera.chat/#{{ channel }}"
+  style="border:0; width:100%; height:600px;">
 </iframe>
 
 <p>
-  <a href="/logs/{{ page.channel_name }}.html" target="_blank">
-    View Chat History for this Post
+  <a href="/logs/{{ channel }}.html" target="_blank">
+    View Chat History
   </a>
 </p>
