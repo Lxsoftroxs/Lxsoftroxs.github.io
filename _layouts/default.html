@@ -1,26 +1,53 @@
-<!-- _layouts/default.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>{{ page.title }} - {{ site.title }}</title>
   <style>
-    /* Critical CSS inlined to prevent flash */
+    /* Critical CSS to prevent flash of unstyled content */
+    .no-flash { visibility: hidden; }
     body {
       background-color: #111;
       color: #ddd;
       font-family: 'Courier New', Courier, monospace;
       text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    .site-header, .site-footer, .container {
+      padding: 20px;
+    }
+    .site-header {
+      background-color: #222;
+      border-bottom: 3px solid #6df;
+    }
+    .site-footer {
+      background-color: #222;
+      border-top: 3px solid #6df;
+      font-size: 0.8em;
+      color: #666;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #000;
     }
   </style>
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
 </head>
-
-<body>
+<body class="no-flash">
   {% include header.html %}
   <div class="container">
     {{ content }}
   </div>
   {% include footer.html %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      document.body.classList.remove("no-flash");
+    });
+  </script>
 </body>
 </html>
