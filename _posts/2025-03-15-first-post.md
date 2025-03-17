@@ -2,7 +2,6 @@
 layout: post
 title: "Hello World"
 date: 2025-03-15
-channel_name: post-Hello-World
 ---
 We in this bitch.
 
