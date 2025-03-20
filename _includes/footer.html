@@ -10,7 +10,7 @@
 document.getElementById("subscribe-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = document.getElementById("email-input").value;
-  const res = await fetch("https://your-serverless-url/api/subscribe", {
+  const res = await fetch("https://subscriber-api-lolroxs.vercel.app/api/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email })
