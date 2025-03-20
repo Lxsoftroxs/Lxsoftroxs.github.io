@@ -49,7 +49,7 @@ jobs:
         run: |
           POST=$(ls -t _posts | head -n1)
           TITLE=$(grep -m1 "^title:" _posts/$POST | sed 's/title: //')
-          URL="https://yourgithubpagesurl.com/$(basename "$POST" .md)/"
+          URL="https://lxsoftroxs.github.io/$(basename "$POST" .md)/"
           echo "POST_TITLE=$TITLE" >> $GITHUB_ENV
           echo "POST_URL=$URL" >> $GITHUB_ENV
 
