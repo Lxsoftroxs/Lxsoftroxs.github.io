@@ -1,4 +1,24 @@
 <!-- _includes/footer.html -->
 <footer class="site-footer">
+  <form id="subscribe-form">
+  <input type="email" id="email-input" placeholder="Your email address" required>
+  <button type="submit">Subscribe</button>
+</form>
+<p id="subscribe-msg"></p>
+
+<script>
+document.getElementById("subscribe-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("email-input").value;
+  const res = await fetch("https://your-serverless-url/api/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+  const data = await res.json();
+  document.getElementById("subscribe-msg").innerText = data.message;
+});
+</script>
+
   <p>&copy; {{ site.time | date: "%Y" }} {{ site.title }}. All rights reserved.</p>
 </footer>
