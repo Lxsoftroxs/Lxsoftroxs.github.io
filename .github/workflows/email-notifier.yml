@@ -50,7 +50,12 @@ jobs:
 
       - name: Send notification email
         run: |
-          SUBJECT="New Post: '${{ env.POST_TITLE }}'"
-          BODY="Check out the new post: '${{ env.POST_TITLE }}'
+          # Safely escape quotes in the SUBJECT
+          SUBJECT="New Post: \"${{ env.POST_TITLE }}\""
+
+          # Safely escape quotes in the BODY (including line break)
+          BODY="Check out the new post: \"${{ env.POST_TITLE }}\"
           ${{ env.POST_URL }}"
-          echo -e "Subject: ${SUBJECT}\n\n${BODY}" | msmtp -a default ${{ env.EMAIL_LIST }}
+
+          # Pipe the properly escaped Subject/Body into msmtp
+          echo -e "Subject: $SUBJECT\n\n$BODY" | msmtp -a default ${{ env.EMAIL_LIST }}
