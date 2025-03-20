@@ -50,7 +50,7 @@ jobs:
 
       - name: Send notification email
         run: |
-          SUBJECT='New Post: "${{ env.POST_TITLE }}"'
-          BODY='Check out the new post: "${{ env.POST_TITLE }}"
-          ${{ env.POST_URL }}'
-          echo -e "Subject: $SUBJECT\n\n$BODY" | msmtp -a default ${{ env.EMAIL_LIST }}
+          SUBJECT="New Post: '${{ env.POST_TITLE }}'"
+          BODY="Check out the new post: '${{ env.POST_TITLE }}'
+          ${{ env.POST_URL }}"
+          echo -e "Subject: ${SUBJECT}\n\n${BODY}" | msmtp -a default ${{ env.EMAIL_LIST }}
