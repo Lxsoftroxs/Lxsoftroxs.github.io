@@ -1,0 +1,55 @@
+name: Notify Subscribers of New Content
+
+on:
+  push:
+    paths:
+      - "_posts/**"        # Adjust or add paths for photos if needed, e.g., "assets/images/**"
+    branches:
+      - main              # Adjust if your default branch is different
+
+jobs:
+  send_email:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install msmtp
+        run: |
+          sudo apt update
+          sudo apt install -y msmtp msmtp-mta
+
+      - name: Configure msmtp
+        run: |
+          cat <<EOF > ~/.msmtprc
+          account default
+          host smtp.gmail.com
+          port 587
+          auth on
+          tls on
+          tls_starttls on
+          user ${{ secrets.EMAIL_USER }}
+          password ${{ secrets.EMAIL_PASS }}
+          from ${{ secrets.EMAIL_USER }}
+          logfile ~/.msmtp.log
+          EOF
+          chmod 600 ~/.msmtprc
+
+      - name: Get Latest Blog Post Title & URL
+        id: latest_post
+        run: |
+          # This example assumes your posts are in the _posts directory
+          LATEST_POST=$(ls -t _posts | head -n 1)
+          # Extract title from YAML front matter
+          POST_TITLE=$(grep -m 1 "^title:" _posts/$LATEST_POST | sed 's/title: //')
+          # Construct URL; adjust this to match your GitHub Pages URL structure
+          POST_URL="https://https://lxsoftroxs.github.io/$(basename _posts/$LATEST_POST .md)/"
+          echo "TITLE=$POST_TITLE" >> $GITHUB_ENV
+          echo "URL=$POST_URL" >> $GITHUB_ENV
+
+      - name: Send Email Notification
+        run: |
+          EMAIL_SUBJECT="New Blog Post: ${{ env.TITLE }}"
+          EMAIL_BODY="A new blog post has been published!\n\nTitle: ${{ env.TITLE }}\nRead it here: ${{ env.URL }}"
+          echo -e "Subject: $EMAIL_SUBJECT\n\n$EMAIL_BODY" | msmtp -a default ${{ secrets.EMAIL_RECIPIENTS }}
