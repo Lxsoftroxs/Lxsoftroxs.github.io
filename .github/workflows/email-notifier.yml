@@ -1,10 +1,10 @@
-name: Notify Subscribers
+name: Notify Subscribers of New Content
 
 on:
   push:
     paths:
       - "_posts/**"
-      - "assets/images/**"
+      - "assets/images/**"  # If you want to trigger on new photos as well
     branches:
       - main
 
@@ -15,12 +15,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install msmtp
-        run: sudo apt-get install msmtp jq -y
+      - name: Install msmtp and jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y msmtp msmtp-mta jq
 
       - name: Configure msmtp
         run: |
-          echo "account default
+          cat <<EOF > ~/.msmtprc
+          account default
           host smtp.gmail.com
           port 587
           auth on
@@ -28,7 +31,9 @@ jobs:
           tls_starttls on
           user ${{ secrets.EMAIL_USER }}
           password ${{ secrets.EMAIL_PASS }}
-          from ${{ secrets.EMAIL_USER }}" > ~/.msmtprc
+          from ${{ secrets.EMAIL_USER }}
+          logfile ~/.msmtp.log
+          EOF
           chmod 600 ~/.msmtprc
 
       - name: Fetch subscribers
@@ -43,19 +48,15 @@ jobs:
       - name: Get latest post details
         run: |
           POST=$(ls -t _posts | head -n1)
-          TITLE=$(grep -m1 "^title:" "_posts/$POST" | sed 's/title: //')
-          URL="https://lxsoftroxs.github.io/$(basename "$POST" .md)/"
+          TITLE=$(grep -m1 "^title:" _posts/$POST | sed 's/title: //')
+          URL="https://yourgithubpagesurl.com/$(basename "$POST" .md)/"
           echo "POST_TITLE=$TITLE" >> $GITHUB_ENV
           echo "POST_URL=$URL" >> $GITHUB_ENV
 
       - name: Send notification email
         run: |
-          # Safely escape quotes in the SUBJECT
+          # Create a subject with escaped inner quotes
           SUBJECT="New Post: \"${{ env.POST_TITLE }}\""
-
-          # Safely escape quotes in the BODY (including line break)
-          BODY="Check out the new post: \"${{ env.POST_TITLE }}\"
-          ${{ env.POST_URL }}"
-
-          # Pipe the properly escaped Subject/Body into msmtp
-          echo -e "Subject: $SUBJECT\n\n$BODY" | msmtp -a default ${{ env.EMAIL_LIST }}
+          # Create a body that includes the post title and URL on a new line
+          BODY="Check out the new post: \"${{ env.POST_TITLE }}\"\n${{ env.POST_URL }}"
+          echo -e "Subject: ${SUBJECT}\n\n${BODY}" | msmtp -a default "${{ env.EMAIL_LIST }}"
