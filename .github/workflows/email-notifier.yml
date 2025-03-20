@@ -55,8 +55,9 @@ jobs:
 
       - name: Send notification email
         run: |
-          # Create a subject with escaped inner quotes
-          SUBJECT="New Post: \"${{ env.POST_TITLE }}\""
-          # Create a body that includes the post title and URL on a new line
-          BODY="Check out the new post: \"${{ env.POST_TITLE }}\"\n${{ env.POST_URL }}"
-          echo -e "Subject: ${SUBJECT}\n\n${BODY}" | msmtp -a default "${{ env.EMAIL_LIST }}"
+          cat <<EOF | msmtp -a default "${{ env.EMAIL_LIST }}"  
+          Subject: New Post: "${{ env.POST_TITLE }}"
+
+          Check out the new post: "${{ env.POST_TITLE }}"
+          ${{ env.POST_URL }}
+          EOF
