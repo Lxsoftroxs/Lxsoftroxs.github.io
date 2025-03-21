@@ -44,7 +44,7 @@ jobs:
           else
             echo "EMAIL_LIST=" >> $GITHUB_ENV
           fi
-       - name: Get latest post details
+      - name: Get latest post details
         run: |
           POST_FILE=$(ls -t _posts | head -n1)
 
