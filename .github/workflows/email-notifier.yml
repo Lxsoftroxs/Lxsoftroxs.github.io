@@ -44,15 +44,26 @@ jobs:
           else
             echo "EMAIL_LIST=" >> $GITHUB_ENV
           fi
-      - name: Get latest post details
+       - name: Get latest post details
         run: |
-          POST_FILE=$(ls -t _posts | head -n1)  # Get the latest post filename
-          TITLE=$(grep -m1 "^title:" "_posts/$POST_FILE" | sed 's/title: //')  # Extract title
-          SLUG=$(basename "$POST_FILE" .md | cut -d'-' -f4-)  # Extract slug from filename
-          URL="https://lxsoftroxs.github.io/${SLUG}.html"  # Construct correct post URL
+          POST_FILE=$(ls -t _posts | head -n1)
+
+          # Extract title safely from YAML front matter (strip quotes)
+          TITLE=$(grep -m1 "^title:" "_posts/$POST_FILE" | sed 's/^title:[[:space:]]*["'\'']\?\(.*\)["'\'']\?$/\1/')
+
+          # Extract date and slug from filename: YYYY-MM-DD-title.md
+          FILENAME=$(basename "$POST_FILE" .md)
+          YEAR=$(echo "$FILENAME" | cut -d'-' -f1)
+          MONTH=$(echo "$FILENAME" | cut -d'-' -f2)
+          DAY=$(echo "$FILENAME" | cut -d'-' -f3)
+          SLUG=$(echo "$FILENAME" | cut -d'-' -f4-)
+
+          # Construct correct .html URL
+          URL="https://lxsoftroxs.github.io/$YEAR/$MONTH/$DAY/$SLUG.html"
 
           echo "POST_TITLE=$TITLE" >> $GITHUB_ENV
           echo "POST_URL=$URL" >> $GITHUB_ENV
+
 
       - name: Send notification email
         run: |
