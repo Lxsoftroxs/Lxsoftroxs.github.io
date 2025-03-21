@@ -46,23 +46,24 @@ jobs:
           fi
       - name: Get latest post details
         run: |
-          POST_FILE=$(ls -t _posts | head -n1)
+          # Get the most recently committed .md post file
+          POST_FILE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^_posts/' | tail -n1 | xargs basename)
 
-          # Extract title safely from YAML front matter (strip quotes)
+          # Extract title from YAML front matter (strip quotes)
           TITLE=$(grep -m1 "^title:" "_posts/$POST_FILE" | sed 's/^title:[[:space:]]*["'\'']\?\(.*\)["'\'']\?$/\1/')
 
-          # Extract date and slug from filename: YYYY-MM-DD-title.md
+          # Parse the filename: YYYY-MM-DD-title.md
           FILENAME=$(basename "$POST_FILE" .md)
           YEAR=$(echo "$FILENAME" | cut -d'-' -f1)
           MONTH=$(echo "$FILENAME" | cut -d'-' -f2)
           DAY=$(echo "$FILENAME" | cut -d'-' -f3)
           SLUG=$(echo "$FILENAME" | cut -d'-' -f4-)
 
-          # Construct correct .html URL
           URL="https://lxsoftroxs.github.io/$YEAR/$MONTH/$DAY/$SLUG.html"
 
           echo "POST_TITLE=$TITLE" >> $GITHUB_ENV
           echo "POST_URL=$URL" >> $GITHUB_ENV
+
 
 
       - name: Send notification email
