@@ -54,3 +54,13 @@ jobs:
           echo "POST_TITLE=$TITLE" >> $GITHUB_ENV
           echo "POST_URL=$URL" >> $GITHUB_ENV
 
+      - name: Send notification email
+        run: |
+          cat <<EOF | msmtp -a default "${{ env.EMAIL_LIST }}"
+          Subject: New Post: "${{ env.POST_TITLE }}"
+
+          Check out the new post: "${{ env.POST_TITLE }}"
+          ${{ env.POST_URL }}
+          EOF
+
+
