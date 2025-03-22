@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "_posts/**"
-      - "assets/images/**"  # If you want to trigger on new photos as well
+      - "assets/images/**"  # Triggers when new posts or images are added
     branches:
       - main
 
@@ -44,27 +44,33 @@ jobs:
           else
             echo "EMAIL_LIST=" >> $GITHUB_ENV
           fi
+
       - name: Get latest post details
         run: |
-          # Get the most recently committed .md post file
-          POST_FILE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^_posts/' | tail -n1 | xargs basename)
-
-          # Extract title from YAML front matter (strip quotes)
-          TITLE=$(grep -m1 "^title:" "_posts/$POST_FILE" | sed 's/^title:[[:space:]]*["'\'']\?\(.*\)["'\'']\?$/\1/')
-
-          # Parse the filename: YYYY-MM-DD-title.md
+          # 1. Try to get the most recently ADDED .md file in _posts/
+          POST_FILE=$(git log --name-only --pretty=format: --diff-filter=A -n 1 -- _posts/ | grep '.md' | tail -n1)
+          # 2. Fallback: if no new file was found, use the newest (by modification time)
+          if [ -z "$POST_FILE" ]; then
+            POST_FILE=$(ls -t _posts/*.md | head -n1)
+          fi
+          # 3. If STILL empty, fail the workflow
+          if [ -z "$POST_FILE" ]; then
+            echo "Error: No post file found." >&2
+            exit 1
+          fi
+          # 4. Extract title from YAML front matter (strip quotes)
+          TITLE=$(grep -m1 "^title:" "$POST_FILE" | sed 's/^title:[[:space:]]*["'\'']\?\(.*\)["'\'']\?$/\1/')
+          # 5. Parse the filename: expected format: YYYY-MM-DD-title.md
           FILENAME=$(basename "$POST_FILE" .md)
           YEAR=$(echo "$FILENAME" | cut -d'-' -f1)
           MONTH=$(echo "$FILENAME" | cut -d'-' -f2)
           DAY=$(echo "$FILENAME" | cut -d'-' -f3)
           SLUG=$(echo "$FILENAME" | cut -d'-' -f4-)
-
+          # 6. Construct the .html URL (your blog uses .html URLs)
           URL="https://lxsoftroxs.github.io/$YEAR/$MONTH/$DAY/$SLUG.html"
-
+          # 7. Export variables for later steps
           echo "POST_TITLE=$TITLE" >> $GITHUB_ENV
           echo "POST_URL=$URL" >> $GITHUB_ENV
-
-
 
       - name: Send notification email
         run: |
@@ -74,5 +80,3 @@ jobs:
           Check out the new post: "${{ env.POST_TITLE }}"
           ${{ env.POST_URL }}
           EOF
-
-
