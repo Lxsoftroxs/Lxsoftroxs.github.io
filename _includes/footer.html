@@ -1,24 +1,33 @@
 <!-- _includes/footer.html -->
 <footer class="site-footer">
-  <form id="subscribe-form">
-  <input type="email" id="email-input" placeholder="Your email address" required>
+<form id="subscribe-form">
+  <input type="email" id="subscriber-email" placeholder="Enter your email" required>
   <button type="submit">Subscribe</button>
 </form>
-<p id="subscribe-msg"></p>
+<div id="subscribe-message"></div>
 
 <script>
-document.getElementById("subscribe-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = document.getElementById("email-input").value;
-  const res = await fetch("https://subscriber-api-lolroxs.vercel.app/api/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email })
+  document.getElementById("subscribe-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const emailField = document.getElementById("subscriber-email");
+    const email = emailField.value.trim();
+    if (!email) return;
+    
+    try {
+      const response = await fetch("https://subscriber-api-lolroxs.vercel.app/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      document.getElementById("subscribe-message").innerText = data.message || "Subscribed!";
+      if (response.ok) {
+        emailField.value = ""; // Clear the input field on success
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById("subscribe-message").innerText = "Subscription failed. Please try again.";
+    }
   });
-  const data = await res.json();
-  document.getElementById("subscribe-msg").innerText = data.message;
-});
 </script>
-
-  <p>&copy; {{ site.time | date: "%Y" }} {{ site.title }}. All rights reserved.</p>
 </footer>
