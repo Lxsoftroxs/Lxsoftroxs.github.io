@@ -4,7 +4,6 @@ title: "One More Notification"
 date: 2025-03-20
 ---
 
-IM DEBUGGINGGGjdfzlnflxn
-RAHHHHH
-jsjslkds
-kdsfmds
+Heyyyy it only took me two days but now you can sign your email up for the greatest content ever. 
+
+So do it. I'm too tired right now to actually make a new post. 
