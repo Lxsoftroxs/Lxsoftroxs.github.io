@@ -30,6 +30,10 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add _posts/
-        git commit -m "📄 New blog post added automatically"
-        git push https://x-access-token:${TOKEN}@github.com/${REPO}.git HEAD:main
+        git commit -m "New blog post added automatically"
+
+        #Manually override the remote URL to use your PAT
+        git remote set-url origin https://x-access-token:${TOKEN}@github.com/${REPO}.git
+        git push origin HEAD:main
+
 
