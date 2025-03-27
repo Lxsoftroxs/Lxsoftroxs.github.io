@@ -3,6 +3,9 @@ layout: post
 title: "Being Young"
 date: 2025-03-27
 ---
+
+Woe is me. 
+
 As I sit in another public student library I feel a sense of gratefullness for being young. My parents having instilled a sense of extreme close heartedness when handling money, I seek anyway to avoid hotels, travel, and eating. It leads to a sense of homelessness, no where to go, no where to stay, only the bags on my back and time. I don't want to end up homeless, the people on the street fear the system and the work that comes with participating in society. That ideaology grosses me out honestly, its so naturally inhuman, we all want to avoid the work that hurts and yet we know that living is just naturally work. 
 
 I want to grow past this stage in my life. Albeit we're about to enter a depression worse then the great depression. So poor and so few jobs for the younger generations, I feel like some part of me is preparing by living on so little. Fuck man I just want human connection and tribal esk communities. My college accpetances are hingeing on everything right now, my parents could easily cover my tuition for the rest of my life. 
