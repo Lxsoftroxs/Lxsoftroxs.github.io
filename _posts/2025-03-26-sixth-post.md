@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "The Full Story"
-date: 2025-03-27
+date: 2025-03-26
 ---
 
 Human ignorance and degrowth. 
