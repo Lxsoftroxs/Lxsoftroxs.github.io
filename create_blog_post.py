@@ -1,34 +1,24 @@
-import os
 from datetime import date
+import os
 
-blog_dir = "_posts"
-today = date.today()
-date_str = today.isoformat()
+# Define the directory for your blog posts
+BLOG_DIR = "_posts"
+os.makedirs(BLOG_DIR, exist_ok=True)
 
-# Ensure the _posts directory exists
-os.makedirs(blog_dir, exist_ok=True)
+# Get today's date in YYYY-MM-DD format
+today = date.today().isoformat()
 
-# Count existing files to determine post number
-existing = sorted(f for f in os.listdir(blog_dir) if f.endswith(".md"))
-post_num = len(existing) + 1
+# Construct the filename (you can adjust naming as needed)
+filename = f"{today}-post.md"
+filepath = os.path.join(BLOG_DIR, filename)
 
-# Number to word
-ordinals = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh",
-            "eighth", "ninth", "tenth", "eleventh", "twelfth", "thirteenth"]
-ordinal_word = ordinals[post_num - 1] if post_num <= len(ordinals) else f"{post_num}th"
-
-filename = f"{date_str}-{ordinal_word}-post.md"
-filepath = os.path.join(blog_dir, filename)
-
-# Only create file if it doesn't exist
-if not os.path.exists(filepath):
-    with open(filepath, "w") as f:
-        f.write(f"""---
+# Create the markdown file with empty title and today's date
+with open(filepath, "w") as f:
+    f.write(f"""---
 layout: post
-title: "The Full Story"
-date: {date_str}
+title: ""
+date: {today}
 ---
 """)
-    print(f"Created {filepath}")
-else:
-    print("File already exists.")
+
+print(f"Created new post: {filepath}")
