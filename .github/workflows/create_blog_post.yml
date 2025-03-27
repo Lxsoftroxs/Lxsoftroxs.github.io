@@ -21,6 +21,9 @@ jobs:
     - name: Generate blog post file
       run: |
         python create_blog_post.py
+        
+    - name: Debug remotes
+      run: git remote -v
 
     - name: Commit and push new post
       env:
