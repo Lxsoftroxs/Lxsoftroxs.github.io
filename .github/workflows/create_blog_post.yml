@@ -1,0 +1,31 @@
+name: Create Blog Post
+
+on:
+  workflow_dispatch:  # Manually triggered via GitHub UI
+  #schedule:
+  #  - cron: "0 12 * * *"  # Optional: Runs daily at 12:00 UTC
+
+jobs:
+  create-post:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout the repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Generate blog post file
+      run: |
+        python create_blog_post.py
+
+    - name: Commit and push new post
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add _posts/
+        git commit -m "📄 New blog post added automatically"
+        git push
