@@ -1,0 +1,18 @@
+---
+layout: default
+title: "Projects"
+---
+<h1>Visual Coding Projects</h1>
+<p>Click a project to view details.</p>
+<ul>
+  {% for project in site.projects %}
+    <li>
+      <a href="{{ project.url }}">
+        <strong>{{ project.title }}</strong>
+      </a>
+      {% if project.description %}
+        <p>{{ project.description }}</p>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
