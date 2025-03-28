@@ -1,19 +1,29 @@
 ---
-title: "Frog Piano"
-description: "A fun interactive demo: a frog jumps on a piano—click the keys to play notes!"
 layout: default
+title: "Frog Piano"
 permalink: /projects/frog-piano/
 ---
-<!-- Frog Piano Code -->
+
+<div id="frog-piano-container">
+  <h2>Frog Piano</h2>
+  <!-- optional instructions -->
+  <p>Click on a key to play a note. The frog will hop around on top!</p>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.min.js"></script>
 <script>
   let keys = [];
-  let notes = [261.63, 293.66, 329.63, 349.23, 392.00];
-  let osc;
+  let notes = [261.63, 293.66, 329.63, 349.23, 392.00]; // C, D, E, F, G
+  let osc;  // p5 oscillator
   let frog;
   let gravity = 0.3;
+
   function setup() {
-    createCanvas(600, 400);
+    // Create a canvas, attach it to the #frog-piano-container div
+    let cnv = createCanvas(600, 400);
+    cnv.parent('frog-piano-container');
+
+    // Build piano keys along bottom
     let keyWidth = width / notes.length;
     for (let i = 0; i < notes.length; i++) {
       keys.push({
@@ -24,9 +34,13 @@ permalink: /projects/frog-piano/
         note: notes[i]
       });
     }
+
+    // Set up a sine wave oscillator
     osc = new p5.Oscillator('sine');
     osc.start();
     osc.amp(0);
+
+    // Initialize frog near top of piano
     frog = {
       x: random(width),
       y: keys[0].y - 20,
@@ -37,21 +51,30 @@ permalink: /projects/frog-piano/
       timeToNextJump: millis() + 2000
     };
   }
+
   function draw() {
     background(20);
+
+    // Draw piano keys
     fill(255);
     for (let k of keys) {
       rect(k.x, k.y, k.w, k.h);
     }
+
+    // If frog on ground, wait & jump
     if (frog.onGround && millis() > frog.timeToNextJump) {
       frog.vx = random(-3, 3);
       frog.vy = random(-8, -12);
       frog.onGround = false;
     }
+
+    // Gravity / movement if in air
     if (!frog.onGround) {
       frog.vy += gravity;
       frog.x += frog.vx;
       frog.y += frog.vy;
+
+      // If frog lands on piano
       if (frog.y + frog.r >= keys[0].y) {
         frog.y = keys[0].y - frog.r;
         frog.vy = 0;
@@ -59,25 +82,37 @@ permalink: /projects/frog-piano/
         frog.onGround = true;
         frog.timeToNextJump = millis() + 2000;
       }
+
+      // Keep frog in horizontal bounds
       if (frog.x < 0) frog.x = 0;
       if (frog.x > width) frog.x = width;
     }
+
+    // Draw frog
     fill(0, 200, 0);
     ellipse(frog.x, frog.y, frog.r * 2);
+
+    // (Optional) instructions in the corner
     fill(200);
     textSize(16);
     textAlign(CENTER);
-    text("Click on a key to play a note. Frog is jumping!", width / 2, 30);
+    text("Click keys to play notes", width / 2, 30);
   }
+
+  // Mouse click: check if we clicked a key
   function mousePressed() {
     for (let k of keys) {
-      if (mouseX > k.x && mouseX < k.x + k.w &&
-          mouseY > k.y && mouseY < k.y + k.h) {
+      if (
+        mouseX > k.x && mouseX < k.x + k.w &&
+        mouseY > k.y && mouseY < k.y + k.h
+      ) {
         osc.freq(k.note);
         osc.amp(0.5, 0.05);
       }
     }
   }
+
+  // Stop sound on release
   function mouseReleased() {
     osc.amp(0, 0.5);
   }
