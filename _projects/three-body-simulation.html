@@ -31,7 +31,7 @@ function resetSimulation() {
   bodies = [];
   for (let i = 0; i < 3; i++) {
     let pos = createVector(random(width*0.3, width*0.7), random(height*0.3, height*0.7));
-    let vel = createVector(random(-2, 2), random(-2, 2));
+    let vel = createVector(random(-1, 1), random(-1, 1));
     let mass = random(10, 30);
     bodies.push(new Body(pos, vel, mass));
   }
