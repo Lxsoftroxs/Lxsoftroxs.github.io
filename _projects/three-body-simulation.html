@@ -4,102 +4,97 @@ layout: default
 permalink: /projects/three-body-simulation/
 ---
 
-
 <div id="three-body-sim">
-  <p>3-Body Simulation goes here...</p>
+  <h2>3-Body Simulation</h2>
 </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.min.js"></script>
-    <script>
-      let bodies = [];
-      const resetThreshold = 800; // reset if any body goes beyond this distance from canvas edges
-      let resetButton;
+<script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.min.js"></script>
+<script>
+let bodies = [];
+const resetThreshold = 800; // distance beyond which we reset
+let resetButton;
 
-      function setup() {
-        createCanvas(600, 400);
-        resetSimulation();
+function setup() {
+  // Create the canvas and attach it to the #three-body-sim div
+  let cnv = createCanvas(600, 400);
+  cnv.parent('three-body-sim');
 
-        // Create a reset button below the canvas
-        resetButton = createButton('Reset Simulation');
-        resetButton.position(10, height + 10);
-        resetButton.mousePressed(resetSimulation);
-      }
+  // Create a button in normal HTML flow (no absolute positioning)
+  resetButton = createButton('Reset Simulation');
+  resetButton.parent('three-body-sim');
+  resetButton.mousePressed(resetSimulation);
 
-      // Resets simulation with randomized positions, velocities, and masses.
-      function resetSimulation() {
-        bodies = [];
-        // Create 3 bodies with random attributes within defined ranges
-        for (let i = 0; i < 3; i++) {
-          let pos = createVector(random(width * 0.3, width * 0.7), random(height * 0.3, height * 0.7));
-          let vel = createVector(random(-2, 2), random(-2, 2));
-          let mass = random(10, 30);
-          bodies.push(new Body(pos, vel, mass));
-        }
-      }
+  resetSimulation();
+}
 
-      function draw() {
-        background(0);
+function resetSimulation() {
+  bodies = [];
+  for (let i = 0; i < 3; i++) {
+    let pos = createVector(random(width*0.3, width*0.7), random(height*0.3, height*0.7));
+    let vel = createVector(random(-2, 2), random(-2, 2));
+    let mass = random(10, 30);
+    bodies.push(new Body(pos, vel, mass));
+  }
+}
 
-        // Check if any body is too far from the canvas and reset automatically.
-        for (let b of bodies) {
-          if (
-            b.pos.x < -resetThreshold || b.pos.x > width + resetThreshold ||
-            b.pos.y < -resetThreshold || b.pos.y > height + resetThreshold
-          ) {
-            resetSimulation();
-            return;
-          }
-        }
+function draw() {
+  background(0);
 
-        // Apply gravitational forces between each pair of bodies.
-        for (let i = 0; i < bodies.length; i++) {
-          for (let j = i + 1; j < bodies.length; j++) {
-            applyGravity(bodies[i], bodies[j]);
-          }
-        }
+  // If any body goes too far, reset
+  for (let b of bodies) {
+    if (
+      b.pos.x < -resetThreshold || b.pos.x > width + resetThreshold ||
+      b.pos.y < -resetThreshold || b.pos.y > height + resetThreshold
+    ) {
+      resetSimulation();
+      return;
+    }
+  }
 
-        // Update and display each body.
-        for (let b of bodies) {
-          b.update();
-          b.show();
-        }
-      }
+  // Gravity between pairs
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      applyGravity(bodies[i], bodies[j]);
+    }
+  }
 
-      function applyGravity(b1, b2) {
-        let G = 1; // gravitational constant (tweak for desired effect)
-        let r = p5.Vector.sub(b2.pos, b1.pos);
-        let distSq = constrain(r.magSq(), 10, 50000);
-        let forceMag = (G * b1.mass * b2.mass) / distSq;
-        let force = r.setMag(forceMag);
-        b1.applyForce(force);
-        b2.applyForce(force.mult(-1));
-      }
+  // Update & draw bodies
+  for (let b of bodies) {
+    b.update();
+    b.show();
+  }
+}
 
-      class Body {
-        constructor(pos, vel, mass) {
-          this.pos = pos;
-          this.vel = vel;
-          this.acc = createVector(0, 0);
-          this.mass = mass;
-        }
+function applyGravity(b1, b2) {
+  let G = 1;
+  let r = p5.Vector.sub(b2.pos, b1.pos);
+  let distSq = constrain(r.magSq(), 10, 50000);
+  let forceMag = (G * b1.mass * b2.mass) / distSq;
+  let force = r.setMag(forceMag);
+  b1.applyForce(force);
+  b2.applyForce(force.mult(-1));
+}
 
-        applyForce(f) {
-          let a = p5.Vector.div(f, this.mass);
-          this.acc.add(a);
-        }
-
-        update() {
-          this.vel.add(this.acc);
-          this.pos.add(this.vel);
-          this.acc.mult(0);
-        }
-
-        show() {
-          noStroke();
-          fill(255);
-          ellipse(this.pos.x, this.pos.y, this.mass, this.mass);
-        }
-      }
-    </script>
-
-
+class Body {
+  constructor(pos, vel, mass) {
+    this.pos = pos;
+    this.vel = vel;
+    this.acc = createVector(0, 0);
+    this.mass = mass;
+  }
+  applyForce(f) {
+    let a = p5.Vector.div(f, this.mass);
+    this.acc.add(a);
+  }
+  update() {
+    this.vel.add(this.acc);
+    this.pos.add(this.vel);
+    this.acc.mult(0);
+  }
+  show() {
+    noStroke();
+    fill(255);
+    ellipse(this.pos.x, this.pos.y, this.mass, this.mass);
+  }
+}
+</script>
