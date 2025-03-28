@@ -1,0 +1,60 @@
+---
+title: "3-Body Simulation"
+description: "A simple simulation of gravitational interactions between three bodies."
+layout: project
+permalink: /projects/three-body-simulation/
+---
+<!-- 3-Body Simulation Code -->
+<script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.min.js"></script>
+<script>
+  let bodies = [];
+  function setup() {
+    createCanvas(600, 400);
+    bodies.push(new Body(createVector(width/2 - 50, height/2), createVector(0, 2), 20));
+    bodies.push(new Body(createVector(width/2 + 50, height/2), createVector(0, -2), 20));
+    bodies.push(new Body(createVector(width/2, height/2 - 80), createVector(2, 0), 20));
+  }
+  function draw() {
+    background(0);
+    for (let i = 0; i < bodies.length; i++) {
+      for (let j = i+1; j < bodies.length; j++) {
+        applyGravity(bodies[i], bodies[j]);
+      }
+    }
+    for (let b of bodies) {
+      b.update();
+      b.show();
+    }
+  }
+  function applyGravity(b1, b2) {
+    let G = 1;
+    let r = p5.Vector.sub(b2.pos, b1.pos);
+    let distSq = constrain(r.magSq(), 10, 50000);
+    let forceMag = (G * b1.mass * b2.mass) / distSq;
+    let force = r.setMag(forceMag);
+    b1.applyForce(force);
+    b2.applyForce(force.mult(-1));
+  }
+  class Body {
+    constructor(pos, vel, mass) {
+      this.pos = pos;
+      this.vel = vel;
+      this.acc = createVector(0, 0);
+      this.mass = mass;
+    }
+    applyForce(f) {
+      let a = p5.Vector.div(f, this.mass);
+      this.acc.add(a);
+    }
+    update() {
+      this.vel.add(this.acc);
+      this.pos.add(this.vel);
+      this.acc.mult(0);
+    }
+    show() {
+      noStroke();
+      fill(255);
+      ellipse(this.pos.x, this.pos.y, this.mass, this.mass);
+    }
+  }
+</script>
