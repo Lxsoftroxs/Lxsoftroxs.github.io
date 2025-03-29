@@ -3,6 +3,8 @@ layout: default
 title: "Daily Journal"
 permalink: /journal/
 ---
+<h1>Daily Journal</h1>
+<p>Click a day on the calendar to view that day's entry.</p>
 
 <!-- Month Navigation Controls -->
 <div id="calendar-controls" style="text-align:center; margin-bottom:10px;">
@@ -13,21 +15,14 @@ permalink: /journal/
 
 <div id="calendar"></div>
 
-<!-- Modal for displaying an entry -->
-<div id="entry-modal" style="display:none; position: fixed; top:20%; left:50%; transform: translateX(-50%); background:#fff; color:#000; padding:20px; border:2px solid #333; max-width:80%; max-height:80%; overflow-y:auto; z-index:1000;">
-  <span id="close-modal" style="cursor:pointer; float:right; font-size:1.5em;">&times;</span>
-  <div id="modal-content"></div>
-</div>
-
 <script>
   // Build an array of journal entries from your _journal collection using Liquid.
-  // Each entry includes its date (formatted as YYYY-MM-DD), title, content, and URL.
+  // Each entry includes its date (formatted as YYYY-MM-DD), title, and URL.
   var journalEntries = [
   {% for entry in site.journal %}
     {
       "date": "{{ entry.date | date: '%Y-%m-%d' }}",
       "title": "{{ entry.title | escape }}",
-      "content": {{ entry.content | jsonify }},
       "url": "{{ entry.url | relative_url }}"
     }{% unless forloop.last %},{% endunless %}
   {% endfor %}
@@ -92,10 +87,10 @@ permalink: /journal/
             cell.style.backgroundColor = '#444';
             cell.style.cursor = 'pointer';
             cell.title = entry.title;
-            // Wrap the event listener in an IIFE to capture the correct entry.
+            // On click, redirect to the entry's page.
             cell.addEventListener('click', (function(entryCopy) {
               return function(e) {
-                showEntryModal(entryCopy);
+                window.location.href = entryCopy.url;
               };
             })(entry));
           }
@@ -107,19 +102,6 @@ permalink: /journal/
     }
     calendarDiv.appendChild(table);
   }
-
-  // Function to display the journal entry in a modal.
-  function showEntryModal(entry) {
-    var modal = document.getElementById('entry-modal');
-    var contentDiv = document.getElementById('modal-content');
-    contentDiv.innerHTML = '<h2>' + entry.title + '</h2>' + entry.content;
-    modal.style.display = 'block';
-  }
-
-  // Event listener to close the modal.
-  document.getElementById('close-modal').addEventListener('click', function() {
-    document.getElementById('entry-modal').style.display = 'none';
-  });
 
   // Event listeners for previous and next month buttons.
   document.getElementById('prev-month').addEventListener('click', function() {
