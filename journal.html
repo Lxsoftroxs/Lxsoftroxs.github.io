@@ -3,20 +3,25 @@ layout: default
 title: "Daily Journal"
 permalink: /journal/
 ---
-<h1>Daily Journal</h1>
-<p>Click a day on the calendar to read that day's entry.</p>
+
+<!-- Month Navigation Controls -->
+<div id="calendar-controls" style="text-align:center; margin-bottom:10px;">
+  <button id="prev-month">Previous Month</button>
+  <span id="month-display" style="margin: 0 15px; font-weight:bold;"></span>
+  <button id="next-month">Next Month</button>
+</div>
 
 <div id="calendar"></div>
 
-<!-- Simple Modal for displaying an entry -->
-<div id="entry-modal" style="display:none; position: fixed; top:20%; left:50%; transform: translateX(-50%); background:#fff; color:#000; padding:20px; border:2px solid #333; max-width:80%; max-height:80%; overflow-y: auto; z-index:1000;">
+<!-- Modal for displaying an entry -->
+<div id="entry-modal" style="display:none; position: fixed; top:20%; left:50%; transform: translateX(-50%); background:#fff; color:#000; padding:20px; border:2px solid #333; max-width:80%; max-height:80%; overflow-y:auto; z-index:1000;">
   <span id="close-modal" style="cursor:pointer; float:right; font-size:1.5em;">&times;</span>
   <div id="modal-content"></div>
 </div>
 
 <script>
   // Build an array of journal entries from your _journal collection using Liquid.
-  // Each entry is an object with its date (YYYY-MM-DD), title, and content.
+  // Each entry includes its date (formatted as YYYY-MM-DD), title, content, and URL.
   var journalEntries = [
   {% for entry in site.journal %}
     {
@@ -28,17 +33,22 @@ permalink: /journal/
   {% endfor %}
   ];
 
-  // Build a calendar table for the specified year and month (month is 0-indexed)
+  // Global variables for current displayed month (0-indexed) and year.
+  var today = new Date();
+  var currentYear = today.getFullYear();
+  var currentMonth = today.getMonth();
+
+  // Build a calendar for a given year and month.
   function buildCalendar(year, month) {
     var calendarDiv = document.getElementById('calendar');
-    calendarDiv.innerHTML = '';
+    calendarDiv.innerHTML = ''; // Clear previous calendar.
     var table = document.createElement('table');
     table.style.margin = '0 auto';
     table.style.borderCollapse = 'collapse';
     table.style.width = '80%';
     table.style.maxWidth = '600px';
 
-    // Header: Days of Week
+    // Days of the week header.
     var daysOfWeek = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     var headerRow = document.createElement('tr');
     daysOfWeek.forEach(function(day) {
@@ -50,12 +60,18 @@ permalink: /journal/
     });
     table.appendChild(headerRow);
 
+    // Update the month display.
+    var monthDisplay = document.getElementById('month-display');
+    var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    monthDisplay.textContent = monthNames[month] + ' ' + year;
+
+    // Determine first day and number of days in the month.
     var firstDay = new Date(year, month, 1);
     var startingDay = firstDay.getDay();
-    var daysInMonth = new Date(year, month+1, 0).getDate();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
     var date = 1;
 
-    // 6-week calendar grid
+    // Create 6 rows (weeks) in the calendar.
     for (var i = 0; i < 6; i++) {
       var row = document.createElement('tr');
       for (var j = 0; j < 7; j++) {
@@ -69,17 +85,19 @@ permalink: /journal/
           cell.textContent = '';
         } else {
           cell.textContent = date;
-          var cellDate = year + '-' + (month+1).toString().padStart(2, '0') + '-' + date.toString().padStart(2, '0');
-          // Check if there's a journal entry for this date
+          var cellDate = year + '-' + (month + 1).toString().padStart(2, '0') + '-' + date.toString().padStart(2, '0');
+          // Check if there's a journal entry for this date.
           var entry = journalEntries.find(e => e.date === cellDate);
           if (entry) {
             cell.style.backgroundColor = '#444';
             cell.style.cursor = 'pointer';
             cell.title = entry.title;
-            cell.addEventListener('click', function(e) {
-              // When clicked, show modal with entry content
-              showEntryModal(entry);
-            });
+            // Wrap the event listener in an IIFE to capture the correct entry.
+            cell.addEventListener('click', (function(entryCopy) {
+              return function(e) {
+                showEntryModal(entryCopy);
+              };
+            })(entry));
           }
           date++;
         }
@@ -90,7 +108,7 @@ permalink: /journal/
     calendarDiv.appendChild(table);
   }
 
-  // Display the journal entry in the modal
+  // Function to display the journal entry in a modal.
   function showEntryModal(entry) {
     var modal = document.getElementById('entry-modal');
     var contentDiv = document.getElementById('modal-content');
@@ -98,12 +116,29 @@ permalink: /journal/
     modal.style.display = 'block';
   }
 
-  // Close modal handler
+  // Event listener to close the modal.
   document.getElementById('close-modal').addEventListener('click', function() {
     document.getElementById('entry-modal').style.display = 'none';
   });
 
-  // Build calendar for current month
-  var today = new Date();
-  buildCalendar(today.getFullYear(), today.getMonth());
+  // Event listeners for previous and next month buttons.
+  document.getElementById('prev-month').addEventListener('click', function() {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    buildCalendar(currentYear, currentMonth);
+  });
+  document.getElementById('next-month').addEventListener('click', function() {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    buildCalendar(currentYear, currentMonth);
+  });
+
+  // Initially build the calendar for the current month.
+  buildCalendar(currentYear, currentMonth);
 </script>
