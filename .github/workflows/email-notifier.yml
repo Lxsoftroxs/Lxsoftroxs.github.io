@@ -2,24 +2,28 @@ name: Notify Subscribers of New Content
 
 on:
   push:
+    # Only run if a commit touches the _posts folder
     paths:
       - "_posts/**"
-      - "assets/images/**"  # Triggers when new posts or images are added
     branches:
       - main
 
 jobs:
   notify:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2. Install msmtp (mail) and jq (JSON parsing)
       - name: Install msmtp and jq
         run: |
           sudo apt-get update
-          sudo apt-get install -y msmtp msmtp-mta jq
+          sudo apt-get install -y msmtp jq
 
+      # 3. Configure msmtp with your Gmail credentials (stored in repo secrets)
       - name: Configure msmtp
         run: |
           cat <<EOF > ~/.msmtprc
@@ -36,6 +40,7 @@ jobs:
           EOF
           chmod 600 ~/.msmtprc
 
+      # 4. Build the subscriber email list (comma-separated)
       - name: Fetch subscribers
         run: |
           if [ -f subscribers.json ]; then
@@ -45,38 +50,41 @@ jobs:
             echo "EMAIL_LIST=" >> $GITHUB_ENV
           fi
 
-      - name: Get latest post details
+      # 5. Identify any brand-new post file added in THIS push
+      - name: Detect new post
+        id: detect
         run: |
-          # 1. Try to get the most recently ADDED .md file in _posts/
-          POST_FILE=$(git log --name-only --pretty=format: --diff-filter=A -n 1 -- _posts/ | grep '.md' | tail -n1)
-          # 2. Fallback: if no new file was found, use the newest (by modification time)
-          if [ -z "$POST_FILE" ]; then
-            POST_FILE=$(ls -t _posts/*.md | head -n1)
+          # Look for files added (A) between the previous and current commit
+          NEW_POST=$(git diff --name-only --diff-filter=A "${{ github.event.before }}" "${{ github.sha }}" -- '_posts/*.md' | head -n1)
+
+          if [ -z "$NEW_POST" ]; then
+            echo "No new post added – skipping notification."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0    # Exit early (job succeeds, but later steps are skipped)
           fi
-          # 3. If STILL empty, fail the workflow
-          if [ -z "$POST_FILE" ]; then
-            echo "Error: No post file found." >&2
-            exit 1
-          fi
-          # 4. Extract title from YAML front matter (strip quotes)
-          TITLE=$(grep -m1 "^title:" "$POST_FILE" | sed 's/^title:[[:space:]]*["'\'']\?\(.*\)["'\'']\?$/\1/')
-          # 5. Parse the filename: expected format: YYYY-MM-DD-title.md
-          FILENAME=$(basename "$POST_FILE" .md)
+
+          # Extract post title from YAML front matter
+          TITLE=$(grep -m1 '^title:' "$NEW_POST" | sed 's/^title:[[:space:]]*["'\'']\?\(.*\)["'\'']\?$/\1/')
+
+          # Build URL: _posts/YYYY-MM-DD-slug.md → /YYYY/MM/DD/slug.html
+          FILENAME=$(basename "$NEW_POST" .md)
           YEAR=$(echo "$FILENAME" | cut -d'-' -f1)
           MONTH=$(echo "$FILENAME" | cut -d'-' -f2)
           DAY=$(echo "$FILENAME" | cut -d'-' -f3)
           SLUG=$(echo "$FILENAME" | cut -d'-' -f4-)
-          # 6. Construct the .html URL (your blog uses .html URLs)
           URL="https://lxsoftroxs.github.io/$YEAR/$MONTH/$DAY/$SLUG.html"
-          # 7. Export variables for later steps
-          echo "POST_TITLE=$TITLE" >> $GITHUB_ENV
-          echo "POST_URL=$URL" >> $GITHUB_ENV
 
+          echo "POST_TITLE=$TITLE"   >> $GITHUB_ENV
+          echo "POST_URL=$URL"       >> $GITHUB_ENV
+          echo "skip=false"          >> $GITHUB_OUTPUT
+
+      # 6. Send the email (only if we found a new post AND there are subscribers)
       - name: Send notification email
+        if: steps.detect.outputs.skip == 'false' && env.EMAIL_LIST != ''
         run: |
           cat <<EOF | msmtp -a default "${{ env.EMAIL_LIST }}"
-          Subject: New Post: "${{ env.POST_TITLE }}"
+          Subject: New Post: ${POST_TITLE}
 
-          Check out the new post: "${{ env.POST_TITLE }}"
-          ${{ env.POST_URL }}
+          Check out the new post: "${POST_TITLE}"
+          ${POST_URL}
           EOF
