@@ -1,0 +1,224 @@
+---
+title: "Heading Simulation"
+layout: default
+permalink: /projects/heading-simulation/
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heading‑Choice Monte‑Carlo Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.30.0"></script>
+  <style>
+    body{font-family:system-ui,Roboto,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:1rem;line-height:1.4}
+    h1{margin-top:0}
+    #controls{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;padding:1rem;background:#222;border-radius:0.75rem}
+    #controls label{display:flex;flex-direction:column;font-size:0.9rem}
+    input[type="number"]{width:6rem;padding:0.25rem;border-radius:0.25rem;border:1px solid #555;background:#333;color:#eee}
+    button{padding:0.5rem 1rem;border:none;border-radius:0.4rem;background:#3b82f6;font-weight:600;color:#fff;cursor:pointer}
+    button:disabled{opacity:0.6;cursor:progress}
+    #scatter,#heatmap{width:100%;height:400px;margin-top:2rem}
+  </style>
+</head>
+<body>
+  <h1>Almost‑Optimal Initial Heading – Monte‑Carlo Explorer</h1>
+  <p>Adjust the parameters &amp; click <strong>Run Simulation</strong>. The entire computation runs client‑side; no server required.</p>
+
+  <div id="controls">
+    <label>Known POIs (n<sub>known</sub>)
+      <input id="nk" type="number" min="1" max="20" value="5" />
+    </label>
+    <label>Unknown POIs (n<sub>unknown</sub>)
+      <input id="nu" type="number" min="0" max="50" value="10" />
+    </label>
+    <label>v<sub>road</sub> (m/s)
+      <input id="vroad" type="number" min="0.1" step="0.1" value="8" />
+    </label>
+    <label>v<sub>walk</sub> (m/s)
+      <input id="vwalk" type="number" min="0.1" step="0.1" value="1" />
+    </label>
+    <label>Monte‑Carlo trials
+      <input id="trials" type="number" min="1" max="2000" value="200" />
+    </label>
+    <button id="runBtn">Run Simulation</button>
+  </div>
+
+  <div id="scatter"></div>
+  <div id="heatmap"></div>
+
+  <script>
+    /* -------------------------------------------------------
+       Tiny helper utilities
+    -------------------------------------------------------*/
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const randVec = (box) => [rand(0, box), rand(0, box)];
+
+    /* -------------------------------------------------------
+       Build road graph and weight matrix
+    -------------------------------------------------------*/
+    function buildNetwork(idxKnown, pois, vR) {
+      const n = pois.length;
+      const W = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: n }, (__, j) => (i === j ? 0 : Infinity))
+      );
+      const roads = [];
+      for (let a = 0; a < idxKnown.length; a++) {
+        for (let b = 0; b < a; b++) {
+          const i = idxKnown[a], j = idxKnown[b];
+          const p1 = pois[i], p2 = pois[j];
+          const d = Math.hypot(p1[0] - p2[0], p1[1] - p2[1]);
+          W[i][j] = W[j][i] = d / vR;
+          roads.push({ p1, p2, i, j });
+        }
+      }
+      return { roads, W };
+    }
+
+    /* -------------------------------------------------------
+       Dense Floyd‑Warshall for shortest paths
+    -------------------------------------------------------*/
+    function floydWarshall(W) {
+      const D = W.map((row) => row.slice());
+      const n = D.length;
+      for (let k = 0; k < n; k++)
+        for (let i = 0; i < n; i++)
+          for (let j = 0; j < n; j++) {
+            const alt = D[i][k] + D[k][j];
+            if (alt < D[i][j]) D[i][j] = alt;
+          }
+      return D;
+    }
+
+    /* -------------------------------------------------------
+       Geometric primitives
+    -------------------------------------------------------*/
+    function rayHitAnyRoad(S, dir, roads) {
+      let hit = null, bestT = Infinity;
+      for (const r of roads) {
+        const P = r.p1, Q = r.p2, w = [Q[0] - P[0], Q[1] - P[1]];
+        const A = [[dir[0], -w[0]], [dir[1], -w[1]]];
+        const b = [P[0] - S[0], P[1] - S[1]];
+        const det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+        if (Math.abs(det) < 1e-12) continue;
+        const t = (b[0] * A[1][1] - b[1] * A[0][1]) / det;
+        const u = (A[0][0] * b[1] - A[1][0] * b[0]) / det;
+        if (t < 0 || u < 0 || u > 1) continue;
+        if (t < bestT) {
+          bestT = t;
+          hit = [S[0] + t * dir[0], S[1] + t * dir[1]];
+        }
+      }
+      return { hit, bestT };
+    }
+
+    function hybridTime(r, hit, roads, vW, vR, distToDest) {
+      const t0 = r / vW;
+      let best = Infinity;
+      for (const rd of roads) {
+        const d1 = Math.hypot(hit[0] - rd.p1[0], hit[1] - rd.p1[1]);
+        const d2 = Math.hypot(hit[0] - rd.p2[0], hit[1] - rd.p2[1]);
+        best = Math.min(best,
+          d1 / vR + distToDest[rd.i],
+          d2 / vR + distToDest[rd.j]
+        );
+      }
+      return t0 + best;
+    }
+
+    function findBestHeading(S, roads, pois, vW, vR, idxDest, res, distToDest) {
+      let bestT = Infinity, thetaBest = 0;
+      for (let k = 0; k < res; k++) {
+        const th = (k * 2 * Math.PI) / res;
+        const dir = [Math.cos(th), Math.sin(th)];
+        const { hit, bestT: r } = rayHitAnyRoad(S, dir, roads);
+        let T;
+        if (!hit) {
+          T = Math.hypot(pois[idxDest][0] - S[0], pois[idxDest][1] - S[1]) / vW;
+        } else {
+          T = hybridTime(r, hit, roads, vW, vR, distToDest);
+        }
+        if (T < bestT) { bestT = T; thetaBest = th; }
+      }
+      return thetaBest;
+    }
+
+    /* -------------------------------------------------------
+       Main driver
+    -------------------------------------------------------*/
+    async function runSimulation() {
+      const nk = +document.getElementById("nk").value;
+      const nu = +document.getElementById("nu").value;
+      const vR = +document.getElementById("vroad").value;
+      const vW = +document.getElementById("vwalk").value;
+      const trials = +document.getElementById("trials").value;
+      const BTN = document.getElementById("runBtn");
+      BTN.disabled = true; BTN.textContent = "Running…";
+
+      const phiOrigArr = [], thetaEmpArr = [], r_nArr = [], r_vArr = [];
+      for (let t = 0; t < trials; t++) {
+        const Ntot = nk + nu;
+        const S = randVec(1000);
+        const pois = Array.from({ length: Ntot }, () => randVec(1000));
+        const idxDest = 0;
+        const idxKnown = Array.from({ length: nk }, (_, i) => i);
+        const { roads, W } = buildNetwork(idxKnown, pois, vR);
+        const Dmat = floydWarshall(W);
+        const distToDest = Dmat.map((row) => row[idxDest]);
+        const thetaEmp = findBestHeading(S, roads, pois, vW, vR, idxDest, 360, distToDest);
+
+        const phiOrig = (Math.PI/4) * (1 - nk/(nk+nu) * vR/(vR+vW));
+        const r_n = nk/(nk+nu), r_v = vR/(vR+vW);
+
+        phiOrigArr.push(phiOrig);
+        thetaEmpArr.push(thetaEmp);
+        r_nArr.push(r_n);
+        r_vArr.push(r_v);
+
+        if (t % 25 === 0) await new Promise(r => setTimeout(r)); // keep UI responsive
+      }
+
+      /* ------------- simple linear fit φ_new  ----------------*/
+      const X = phiOrigArr.map((_, i) => [1, r_nArr[i], r_vArr[i], r_nArr[i]*r_vArr[i]]);
+      const Y = thetaEmpArr;
+      const Xt = math.transpose(X);
+      const beta = math.multiply(math.multiply(math.inv(math.multiply(Xt, X)), Xt), Y);
+      const phiNewArr = r_nArr.map((r_n,i) => beta[0] + beta[1]*r_n + beta[2]*r_vArr[i] + beta[3]*r_n*r_vArr[i]);
+      const errNewArr = phiNewArr.map((phi,i)=> Math.abs(Math.atan2(Math.sin(thetaEmpArr[i]-phi),Math.cos(thetaEmpArr[i]-phi))));
+
+      /* ------------- scatter plot ---------------------------*/
+      Plotly.newPlot("scatter", [
+        {x: phiOrigArr.map(v=>v*180/Math.PI), y: thetaEmpArr.map(v=>v*180/Math.PI), mode:"markers", marker:{size:6,color:"#60a5fa"}, name:"Original φ"},
+        {x: phiNewArr.map(v=>v*180/Math.PI), y: thetaEmpArr.map(v=>v*180/Math.PI), mode:"markers", marker:{size:6,color:"#f87171"}, name:"Refined φ"}
+      ], { title:"Empirical θ* vs φ", xaxis:{title:"φ (deg)"}, yaxis:{title:"θ* (deg)"} });
+
+      /* ------------- heatmap --------------------------------*/
+      const bins = 8;
+      const heat = Array.from({length:bins},()=>Array.from({length:bins},()=>[]));
+      r_nArr.forEach((rn,i)=>{
+        const bi=Math.min(bins-1,Math.floor(rn*bins));
+        const bj=Math.min(bins-1,Math.floor(r_vArr[i]*bins));
+        heat[bi][bj].push(errNewArr[i]*180/Math.PI);
+      });
+      const z = heat.map(row=>row.map(cell=>cell.length?cell.reduce((a,b)=>a+b)/cell.length:null));
+      Plotly.newPlot("heatmap", [{
+        z,
+        x:Array.from({length:bins},(_,i)=>(i+0.5)/bins),
+        y:Array.from({length:bins},(_,i)=>(i+0.5)/bins),
+        type:"heatmap", colorscale:"Jet", colorbar:{title:"|Err| (deg)"}
+      }], {title:"Refined φ – Mean Error", xaxis:{title:"vR / (vR+vW)"}, yaxis:{title:"nKnown / (nKnown+nUnknown)"}});
+
+      BTN.disabled = false; BTN.textContent = "Run Simulation";
+    }
+
+    /* -------------------------------------------------------
+       Load math.js then enable button
+    -------------------------------------------------------*/
+    const mathScript = document.createElement("script");
+    mathScript.src = "https://cdn.jsdelivr.net/npm/mathjs@11.11.0/lib/browser/math.min.js";
+    mathScript.onload =()=> document.getElementById("runBtn").addEventListener("click", runSimulation);
+    document.head.appendChild(mathScript);
+  </script>
+</body>
+</html>
