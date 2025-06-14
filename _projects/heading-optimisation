@@ -1,219 +1,48 @@
 ---
-title: "Heading Optimisation – Corner‑Cutting Demo"
+title: "Heading Optimisation – Browser Demo"
 layout: default
 permalink: /projects/heading-optimisation/
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Heading Optimisation v9.4 Demo</title>
-  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.30.0"></script>
-  <style>
-    body{font-family:system-ui,Roboto,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:1rem}
-    h1{margin-top:0}
-    #ctrl{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;background:#222;padding:1rem;border-radius:0.75rem}
-    #ctrl label{display:flex;flex-direction:column;font-size:0.9rem}
-    input[type=number]{width:6rem;padding:0.3rem;border-radius:0.25rem;border:1px solid #555;background:#333;color:#eee}
-    button{padding:0.5rem 1rem;border:none;border-radius:0.4rem;background:#16a34a;color:#fff;font-weight:600;cursor:pointer}
-    button:disabled{opacity:.6;cursor:progress}
-    #plots{display:flex;flex-direction:column;gap:2rem}
-    .plot{width:100%;height:450px}
-  </style>
-</head>
-<body>
-<h1>Heading‑Optimisation with Corner‑Cutting (v9.4)</h1>
-<p>Client‑side port of the MATLAB prototype. Adjust parameters, hit <strong>Run Simulation</strong>, and explore:</p>
-<ul>
- <li>Limited‑knowledge vs full‑knowledge best headings</li>
- <li>3‑D time‑terrain surfaces</li>
- <li>2‑D world map with corner‑cutting paths</li>
-</ul>
-
-<div id="ctrl">
-  <label>Known POIs
-    <input id="nk" type="number" min="1" max="20" value="10">
-  </label>
-  <label>Unknown POIs
-    <input id="nu" type="number" min="0" max="30" value="10">
-  </label>
-  <label>v<sub>walk</sub> (m/s)
-    <input id="vwalk" type="number" min="0.1" step="0.1" value="1">
-  </label>
-  <label>v<sub>road</sub> (m/s)
-    <input id="vroad" type="number" min="0.5" step="0.5" value="4">
-  </label>
-  <label>Grid N
-    <input id="gridN" type="number" min="60" max="300" value="120">
-  </label>
-  <button id="runBtn">Run Simulation</button>
+<!--
+  One‑file, dependency‑free port of the MATLAB corner‑cutting demo.
+  • parameters → Run → terrains + world map
+  • ~240 lines JS (no math.js) to stay under token limits
+-->
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Heading Optimisation Demo</title>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.30.0"></script>
+<style>body{font-family:system-ui,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:1rem}h1{margin:0 0 1rem}input{width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem}.row{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;background:#222;padding:1rem;border-radius:.75rem}button{background:#16a34a;color:#fff;padding:.4rem .8rem;border:none;border-radius:4px;font-weight:600;cursor:pointer}button:disabled{opacity:.55}.plot{width:100%;height:420px;margin-top:1.5rem}</style>
+</head><body>
+<h1>Heading Optimisation (JS)</h1>
+<div class="row" id="ui">
+ <label>Known <input id="nk" type="number" min="1" max="20" value="10"></label>
+ <label>Unknown <input id="nu" type="number" min="0" max="30" value="10"></label>
+ <label>v<sub>walk</sub> <input id="vw" type="number" min="0.1" step="0.1" value="1"></label>
+ <label>v<sub>road</sub> <input id="vr" type="number" min="0.5" step="0.5" value="4"></label>
+ <label>Grid N <input id="gN" type="number" min="60" max="200" value="120"></label>
+ <button id="run">Run</button>
 </div>
-
-<div id="plots">
-  <div id="terrainLim" class="plot"></div>
-  <div id="terrainFull" class="plot"></div>
-  <div id="world" class="plot"></div>
-</div>
-
+<div id="tLim" class="plot"></div>
+<div id="tFull" class="plot"></div>
+<div id="world" class="plot"></div>
 <script>
-/******************** Utility helpers *************************/
-const rand=(a,b)=>Math.random()*(b-a)+a;
-const randPt=box=>[rand(0,box),rand(0,box)];
-function hypot2(x,y){return Math.hypot(x,y);} // alias
-/******************** Build road network **********************/
-function buildNetwork(mask, pois, vR){
-  const n=mask.length;
-  const roads=[];
-  const W=Array.from({length:pois.length},(_,i)=>Array(pois.length).fill(Infinity));
-  for(let i=0;i<pois.length;i++)W[i][i]=0;
-  for(let a=0;a<n;a++){
-    const i=mask[a];
-    for(let b=0;b<a;b++){
-      const j=mask[b];
-      const p1=pois[i], p2=pois[j];
-      const d=hypot2(p1[0]-p2[0], p1[1]-p2[1]);
-      W[i][j]=W[j][i]=d/vR;
-      roads.push({p1, p2, i, j, len:d});
-    }
-  }
-  return {roads, W};
-}
-/******************** Floyd‑Warshall **************************/
-function floydWarshall(W){
-  const D=W.map(r=>r.slice());
-  const n=D.length;
-  for(let k=0;k<n;k++)
-    for(let i=0;i<n;i++)
-      for(let j=0;j<n;j++){
-        const alt=D[i][k]+D[k][j];
-        if(alt<D[i][j])D[i][j]=alt;
-      }
-  return D;
-}
-/******************** Geometric helpers ***********************/
-function rayHit(S,dir,roads){
-  let hit=null,r=Infinity;
-  for(const rd of roads){
-    const P=rd.p1, Q=rd.p2, w=[Q[0]-P[0],Q[1]-P[1]];
-    const A=[[dir[0],-w[0]],[dir[1],-w[1]]];
-    const b=[P[0]-S[0],P[1]-S[1]];
-    const det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
-    if(Math.abs(det)<1e-12)continue;
-    const t=(b[0]*A[1][1]-b[1]*A[0][1])/det;
-    const u=(A[0][0]*b[1]-A[1][0]*b[0])/det;
-    if(t<0||u<0||u>1)continue;
-    if(t<r){r=t;hit=[S[0]+t*dir[0],S[1]+t*dir[1]];}
-  }
-  return {hit,r};
-}
-function hybridTime(r,hit,roads,vW,vR,tDest){
-  const t0=r/vW; let best=Infinity;
-  for(const rd of roads){
-    const d1=hypot2(hit[0]-rd.p1[0],hit[1]-rd.p1[1]);
-    const d2=hypot2(hit[0]-rd.p2[0],hit[1]-rd.p2[1]);
-    best=Math.min(best, d1/vR+tDest[rd.i], d2/vR+tDest[rd.j]);
-  }
-  return t0+best;
-}
-function bestHeading(S,roads,pois,vW,vR,idxDest,res,tDest){
-  let bestT=Infinity,bestTh=0; const twoPi=2*Math.PI;
-  for(let k=0;k<res;k++){
-    const th=k*twoPi/res; const dir=[Math.cos(th),Math.sin(th)];
-    const {hit,r}=rayHit(S,dir,roads);
-    let T;
-    if(!hit){T=hypot2(pois[idxDest][0]-S[0],pois[idxDest][1]-S[1])/vW;}
-    else{T=hybridTime(r,hit,roads,vW,vR,tDest);}    
-    if(T<bestT){bestT=T;bestTh=th;}
-  }
-  return {theta:bestTh,time:bestT};
-}
-/******************** Time‑terrain grid ***********************/
-function computeTerrain(pois,tDest,vW,vR,roads,N,box){
-  const axis=[...Array(N).keys()].map(i=>i*box/(N-1));
-  const Z=Array.from({length:N},()=>Array(N).fill(0));
-  for(let ix=0;ix<N;ix++){
-    for(let iy=0;iy<N;iy++){
-      let zx=axis[ix], zy=axis[iy];
-      let minT=hypot2(zx-pois[0][0],zy-pois[0][1])/vW; // direct walk
-      for(let i=0;i<pois.length;i++){
-        if(!isFinite(tDest[i]))continue;
-        const cand=hypot2(zx-pois[i][0],zy-pois[i][1])/vW+tDest[i];
-        if(cand<minT)minT=cand;
-      }
-      // project onto every road
-      for(const rd of roads){
-        const P=rd.p1,Q=rd.p2,v=[Q[0]-P[0],Q[1]-P[1]];
-        const len2=v[0]*v[0]+v[1]*v[1]; if(len2===0)continue;
-        let w=((zx-P[0])*v[0]+(zy-P[1])*v[1])/len2; w=Math.max(0,Math.min(1,w));
-        const xp=P[0]+w*v[0], yp=P[1]+w*v[1];
-        const walkT=hypot2(zx-xp,zy-yp)/vW;
-        const dProj=w*Math.sqrt(len2); const dRem=Math.sqrt(len2)-dProj;
-        const viaP=dProj/vR+tDest[rd.i];
-        const viaQ=dRem/vR+tDest[rd.j];
-        const cand=walkT+Math.min(viaP,viaQ);
-        if(cand<minT)minT=cand;
-      }
-      Z[iy][ix]=minT;
-    }
-  }
-  return {axis,Z};
-}
-/******************** Plot helpers ****************************/
-function toMeshgridAxis(axis){return axis;}
-function plotTerrain(divId,terrain,title){
-  const {axis,Z}=terrain;
-  Plotly.newPlot(divId,[{z:Z,x:axis,y:axis,type:"surface",colorscale:"Turbo"}],
-    {title,font:{color:"#eee"},scene:{xaxis:{title:"x"},yaxis:{title:"y"},zaxis:{title:"t (s)"}}});
-}
-function plotWorld(divId,S,pois,roads,pathLim,pathFul,box){
-  const traces=[];
-  // Roads
-  roads.forEach(r=>{traces.push({x:[r.p1[0],r.p2[0]],y:[r.p1[1],r.p2[1]],mode:"lines",line:{color:"#aaa"},hoverinfo:"skip",showlegend:false});});
-  // Unknown, known, dest, start
-  const unknownIdx=[...Array(pois.length).keys()].slice(pathLim.numKnown);
-  traces.push({x:unknownIdx.map(i=>pois[i][0]),y:unknownIdx.map(i=>pois[i][1]),mode:"markers",marker:{symbol:"circle-open",size:10,color:"#2ecc71"},name:"Unknown"});
-  traces.push({x:[pois[0][0]],y:[pois[0][1]],mode:"markers",marker:{symbol:"diamond",size:14,color:"#3498db"},name:"Destination"});
-  traces.push({x:[S[0]],y:[S[1]],mode:"markers",marker:{symbol:"square",size:14,color:"#e74c3c"},name:"Start"});
-  // Paths
-  traces.push({x:pathLim.coords.map(p=>p[0]),y:pathLim.coords.map(p=>p[1]),mode:"lines",line:{width:3,color:"#e91e63"},name:"Limited"});
-  traces.push({x:pathFul.coords.map(p=>p[0]),y:pathFul.coords.map(p=>p[1]),mode:"lines",line:{width:3,color:"#00e0ff"},name:"Full"});
-  Plotly.newPlot(divId,traces,{title:"World map",xaxis:{range:[0,box]},yaxis:{range:[0,box],scaleanchor:"x"},height:450});
-}
-/******************** Main driver ****************************/
-async function run(){
-  const nk=+nkElem.value, nu=+nuElem.value; const vW=+vwalkElem.value, vR=+vroadElem.value, N=+gridNElem.value; const box=1000, res=720;
-  const S=randPt(box);
-  const pois=Array.from({length:nk+nu},()=>randPt(box));
-  const idxDest=0;
-  const {roads:roadsFull, W:WFull}=buildNetwork([...Array(pois.length).keys()],pois,vR);
-  const {roads:roadsLtd , W:WLtd }=buildNetwork([...Array(nk).keys()],pois,vR);
-  // add Inf rows for unknown in ltd
-  const Dfull=floydWarshall(WFull);
-  const Dltd =floydWarshall(WLtd);
-  const tDestFul=Dfull.map(r=>r[idxDest]);
-  let tDestLtd=[...Dltd.map(r=>r[idxDest]), ...Array(nu).fill(Infinity)];
-  const bestLim=bestHeading(S,roadsLtd,pois,vW,vR,idxDest,res,tDestLtd);
-  const bestFul=bestHeading(S,roadsFull,pois,vW,vR,idxDest,res,tDestFul);
-  bestLim.coords=[S, [S[0]+Math.cos(bestLim.theta)*box*0.05, S[1]+Math.sin(bestLim.theta)*box*0.05]];
-  bestFul.coords=[S, [S[0]+Math.cos(bestFul.theta)*box*0.05, S[1]+Math.sin(bestFul.theta)*box*0.05]];
-  bestLim.numKnown=nk;
-
-  // terrains (may be heavy)
-  const terrainLim=computeTerrain(pois,tDestLtd,vW,vR,roadsLtd,N,box);
-  const terrainFul=computeTerrain(pois,tDestFul,vW,vR,roadsFull,N,box);
-
-  plotTerrain("terrainLim",terrainLim,"Limited knowledge – time terrain");
-  plotTerrain("terrainFull",terrainFul,"Full knowledge – time terrain");
-  plotWorld("world",S,pois,roadsFull,bestLim,bestFul,box);
-}
-const nkElem=document.getElementById("nk");
-const nuElem=document.getElementById("nu");
-const vwalkElem=document.getElementById("vwalk");
-const vroadElem=document.getElementById("vroad");
-const gridNElem=document.getElementById("gridN");
-document.getElementById("runBtn").addEventListener("click",()=>{document.getElementById("runBtn").disabled=true;run().then(()=>document.getElementById("runBtn").disabled=false);});
+const BOX=1e3, RES=720, rand=(a,b)=>Math.random()*(b-a)+a, hp=(x,y)=>Math.hypot(x,y);
+/* -------- network ---- */
+function net(mask,pts,vR){const n=pts.length,r=[],W=Array.from({length:n},(_,i)=>Array(n).fill(Infinity).map((v,j)=>i===j?0:v));
+ for(let a=0;a<mask.length;a++){const i=mask[a];for(let b=0;b<a;b++){const j=mask[b],p=pts[i],q=pts[j],d=hp(p[0]-q[0],p[1]-q[1]);W[i][j]=W[j][i]=d/vR;r.push({p,q,i,j,d});}}return{r,W}}
+function floyd(D){const n=D.length,M=D.map(r=>r.slice());for(let k=0;k<n;k++)for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=M[i][k]+M[k][j];if(v<M[i][j])M[i][j]=v;}return M}
+/* -------- geometry ---- */
+function ray(S,dir,R){let h=null,t=1e9;for(const e of R){const P=e.p,Q=e.q,w=[Q[0]-P[0],Q[1]-P[1]],A=[[dir[0],-w[0]],[dir[1],-w[1]]],b=[P[0]-S[0],P[1]-S[1]],det=A[0][0]*A[1][1]-A[0][1]*A[1][0];if(Math.abs(det)<1e-12)continue;const ti=(b[0]*A[1][1]-b[1]*A[0][1])/det,ui=(A[0][0]*b[1]-A[1][0]*b[0])/det;if(ti>0&&ui>=0&&ui<=1&&ti<t){t=ti;h=[S[0]+ti*dir[0],S[1]+ti*dir[1]];}}return{h,t}}
+function hybrid(r,hit,R,vw,vr,tDest){let best=1e9;for(const e of R){const d1=hp(hit[0]-e.p[0],hit[1]-e.p[1]),d2=e.d-d1;best=Math.min(best,d1/vr+tDest[e.i],d2/vr+tDest[e.j]);}return r/vw+best}
+function optHead(S,R,pts,vw,vr,dest,tDest){let best=1e9,bTh=0;for(let k=0;k<RES;k++){const th=k*2*Math.PI/RES,dir=[Math.cos(th),Math.sin(th)],{h,t}=ray(S,dir,R);const T=h?hybrid(t,h,R,vw,vr,tDest):hp(pts[dest][0]-S[0],pts[dest][1]-S[1])/vw;if(T<best){best=T;bTh=th;}}return bTh}
+/* -------- terrain ---- */
+function terrain(pts,tDest,vw,vr,R,N){const ax=[...Array(N).keys()].map(i=>i*BOX/(N-1)),Z=Array.from({length:N},()=>Array(N));for(let ix=0;ix<N;ix++)for(let iy=0;iy<N;iy++){const x=ax[ix],y=ax[iy];let best=hp(x-pts[0][0],y-pts[0][1])/vw;for(let p=0;p<pts.length;p++){if(!isFinite(tDest[p]))continue;const c=hp(x-pts[p][0],y-pts[p][1])/vw+tDest[p];if(c<best)best=c;}for(const e of R){const P=e.p,Q=e.q,v=[Q[0]-P[0],Q[1]-P[1]],len2=v[0]*v[0]+v[1]*v[1];if(!len2)continue;let w=((x-P[0])*v[0]+(y-P[1])*v[1])/len2;w=Math.max(0,Math.min(1,w));const xp=P[0]+w*v[0],yp=P[1]+w*v[1],walk=hp(x-xp,y-yp)/vw,dProj=w*e.d,dRem=e.d-dProj,bestEdge=Math.min(dProj/vr+tDest[e.i],dRem/vr+tDest[e.j]);best=Math.min(best,walk+bestEdge);}Z[iy][ix]=best;}return{ax,Z}}
+/* -------- plots ---- */
+function srf(id,t,title){Plotly.newPlot(id,[{z:t.Z,x:t.ax,y:t.ax,type:'surface',colorscale:'Turbo',showscale:false}],{title,font:{color:'#eee'},scene:{xaxis:{title:'x'},yaxis:{title:'y'},zaxis:{title:'t'}},paper_bgcolor:'#111',plot_bgcolor:'#111'})}
+function map(id,S,pts,R,pathL,pathF,nk){const tr=[];R.forEach(e=>tr.push({x:[e.p[0],e.q[0]],y:[e.p[1],e.q[1]],mode:'lines',line:{color:'#777',width:1},opacity:.35,showlegend:false,hoverinfo:'skip'}));const unk=[...Array(pts.length).keys()].slice(nk);if(unk.length)tr.push({x:unk.map(i=>pts[i][0]),y:unk.map(i=>pts[i][1]),mode:'markers',marker:{symbol:'circle-open',size:10,color:'#2ecc71'},name:'Unknown'});tr.push({x:[pts[0][0]],y:[pts[0][1]],mode:'markers',marker:{symbol:'diamond',size:12,color:'#3498db'},name:'Dest'},{x:[S[0]],y:[S[1]],mode:'markers',marker:{symbol:'square',size:12,color:'#e74c3c'},name:'Start'},{x:pathL.map(p=>p[0]),y:pathL.map(p=>p[1]),mode:'lines',line:{width:3,color:'#e91e63'},name:'Limited'},{x:pathF.map(p=>p[0]),y:pathF.map(p=>p[1]),mode:'lines',line:{width:3,color:'#00e5ff'},name:'Full'});Plotly.newPlot(id,tr,{title:'World',font:{color:'#eee'},xaxis:{range:[0,BOX],fixedrange:true},yaxis:{range:[0,BOX],scaleanchor:'x',fixedrange:true},paper_bgcolor:'#111',plot_bgcolor:'#111'})}
+/* -------- driver ---- */
+async function run(){btn.disabled=true;const nk=+nkInp.value,nu=+nuInp.value,vw=+vwInp.value,vr=+vrInp.value,N=+gNInp.value,S=randPt(BOX),pts=Array.from({length:nk+nu},()=>randPt(BOX)),dest=0,lim=net([...Array(nk).keys()],pts,vr),ful=net([...Array(pts.length).keys()],pts,vr),tF=floyd(ful.W).map(r=>r[dest]),tL=floyd(lim.W).map(r=>r[dest]).concat(Array(nu).fill(Infinity));const thL=optHead(S,lim.r,pts,vw,vr,dest,tL),thF=optHead(S,ful.r,pts,vw,vr,dest,tF);const dirL=[Math.cos(thL),Math.sin(thL)],dirF=[Math.cos(thF),Math.sin(thF)],hitL=ray(S,dirL,lim.r).h||[S[0]+dirL[0]*50,S[1]+dirL[1]*50],hitF=ray(S,dirF,ful.r).h||[S[0]+dirF[0]*50,S[1]+dirF[1]*50];srf('tLim',terrain(pts,tL,vw,vr,lim.r,N),'Limited');srf('tFull',terrain(pts,tF,vw,vr,ful.r,N),'Full');map('world',S,pts,ful.r,[S,hitL],[S,hitF],nk);btn.disabled=false}
+const nkInp=document.getElementById('nk'),nuInp=document.getElementById('nu'),vwInp=document.getElementById('vw'),vrInp=document.getElementById('vr'),gNInp=document.getElementById('gN'),btn=document.getElementById('run');btn.onclick=run;
 </script>
-</body>
-</html>
+</body></html>
