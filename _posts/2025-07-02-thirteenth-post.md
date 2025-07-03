@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Ugly Choices"
-date: 2025-07-03
+date: 2025-07-02
 ---
 
 You carve the mask you wear, so why make it ugly?
