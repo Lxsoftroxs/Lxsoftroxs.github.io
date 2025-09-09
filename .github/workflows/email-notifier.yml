@@ -88,25 +88,22 @@ jobs:
             exit 0
           fi
 
-          # Simple email pattern to skip obvious bad entries
           EMAIL_RE='^[^[:space:]@]+@[^[:space:]]+\.[^[:space:]]+$'
 
           while IFS= read -r addr; do
             [[ "$addr" =~ $EMAIL_RE ]] || { echo "Skipping invalid: $addr"; continue; }
 
-            # Compose headers+body and let msmtp parse recipients with -t
-            cat <<EOF | msmtp -a default -t
-To: $addr
-From: $FROM
-Subject: New Post: ${POST_TITLE}
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
+            {
+              printf 'To: %s\n' "$addr"
+              printf 'From: %s\n' "$FROM"
+              printf 'Subject: %s\n' "New Post: ${POST_TITLE}"
+              printf 'MIME-Version: 1.0\n'
+              printf 'Content-Type: text/plain; charset=UTF-8\n'
+              printf '\n'
+              printf 'A new post just went live:\n\n'
+              printf '%s\n' "${POST_TITLE}"
+              printf '%s\n\n' "${POST_URL}"
+              printf '(You are receiving this because you subscribed at https://lxsoftroxs.github.io/subscribe/.)\n'
+            } | msmtp -a default -t
 
-A new post just went live:
-
-${POST_TITLE}
-${POST_URL}
-
-(You are receiving this because you subscribed at https://lxsoftroxs.github.io/subscribe/.)
-EOF
           done < /tmp/subs.txt
