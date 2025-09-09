@@ -4,45 +4,209 @@ layout: default
 permalink: /projects/heading-optimisation/
 ---
 
-<!--
-  One‑file, dependency‑free port of the MATLAB corner‑cutting demo.
-  • parameters → Run → terrains + world map
-  • ~240 lines JS (no math.js) to stay under token limits
--->
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Heading Optimisation Demo</title>
-<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.30.0"></script>
-<style>body{font-family:system-ui,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:1rem}h1{margin:0 0 1rem}input{width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem}.row{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;background:#222;padding:1rem;border-radius:.75rem}button{background:#16a34a;color:#fff;padding:.4rem .8rem;border:none;border-radius:4px;font-weight:600;cursor:pointer}button:disabled{opacity:.55}.plot{width:100%;height:420px;margin-top:1.5rem}</style>
-</head><body>
-<h1>Heading Optimisation (JS)</h1>
-<div class="row" id="ui">
- <label>Known <input id="nk" type="number" min="1" max="20" value="10"></label>
- <label>Unknown <input id="nu" type="number" min="0" max="30" value="10"></label>
- <label>v<sub>walk</sub> <input id="vw" type="number" min="0.1" step="0.1" value="1"></label>
- <label>v<sub>road</sub> <input id="vr" type="number" min="0.5" step="0.5" value="4"></label>
- <label>Grid N <input id="gN" type="number" min="60" max="200" value="120"></label>
- <button id="run">Run</button>
+<!-- Controls -->
+<div class="row" id="ui" style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;background:#222;padding:1rem;border-radius:.75rem">
+  <label>Known <input id="nk" type="number" min="1" max="20" value="10" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <label>Unknown <input id="nu" type="number" min="0" max="30" value="10" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <label>v<sub>walk</sub> <input id="vw" type="number" min="0.1" step="0.1" value="1" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <label>v<sub>road</sub> <input id="vr" type="number" min="0.5" step="0.5" value="4" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <label>Grid N <input id="gN" type="number" min="60" max="200" value="120" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <button id="run" style="background:#16a34a;color:#fff;padding:.4rem .8rem;border:none;border-radius:4px;font-weight:600;cursor:pointer">Run</button>
 </div>
-<div id="tLim" class="plot"></div>
-<div id="tFull" class="plot"></div>
-<div id="world" class="plot"></div>
+
+<!-- Plots -->
+<div id="tLim" class="plot" style="width:100%;height:420px;margin-top:1.5rem"></div>
+<div id="tFull" class="plot" style="width:100%;height:420px;margin-top:1.5rem"></div>
+<div id="world" class="plot" style="width:100%;height:420px;margin-top:1.5rem"></div>
+
+<!-- Plotly -->
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.30.0"></script>
+
 <script>
-const BOX=1e3, RES=720, rand=(a,b)=>Math.random()*(b-a)+a, hp=(x,y)=>Math.hypot(x,y);
-/* -------- network ---- */
-function net(mask,pts,vR){const n=pts.length,r=[],W=Array.from({length:n},(_,i)=>Array(n).fill(Infinity).map((v,j)=>i===j?0:v));
- for(let a=0;a<mask.length;a++){const i=mask[a];for(let b=0;b<a;b++){const j=mask[b],p=pts[i],q=pts[j],d=hp(p[0]-q[0],p[1]-q[1]);W[i][j]=W[j][i]=d/vR;r.push({p,q,i,j,d});}}return{r,W}}
-function floyd(D){const n=D.length,M=D.map(r=>r.slice());for(let k=0;k<n;k++)for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=M[i][k]+M[k][j];if(v<M[i][j])M[i][j]=v;}return M}
-/* -------- geometry ---- */
-function ray(S,dir,R){let h=null,t=1e9;for(const e of R){const P=e.p,Q=e.q,w=[Q[0]-P[0],Q[1]-P[1]],A=[[dir[0],-w[0]],[dir[1],-w[1]]],b=[P[0]-S[0],P[1]-S[1]],det=A[0][0]*A[1][1]-A[0][1]*A[1][0];if(Math.abs(det)<1e-12)continue;const ti=(b[0]*A[1][1]-b[1]*A[0][1])/det,ui=(A[0][0]*b[1]-A[1][0]*b[0])/det;if(ti>0&&ui>=0&&ui<=1&&ti<t){t=ti;h=[S[0]+ti*dir[0],S[1]+ti*dir[1]];}}return{h,t}}
-function hybrid(r,hit,R,vw,vr,tDest){let best=1e9;for(const e of R){const d1=hp(hit[0]-e.p[0],hit[1]-e.p[1]),d2=e.d-d1;best=Math.min(best,d1/vr+tDest[e.i],d2/vr+tDest[e.j]);}return r/vw+best}
-function optHead(S,R,pts,vw,vr,dest,tDest){let best=1e9,bTh=0;for(let k=0;k<RES;k++){const th=k*2*Math.PI/RES,dir=[Math.cos(th),Math.sin(th)],{h,t}=ray(S,dir,R);const T=h?hybrid(t,h,R,vw,vr,tDest):hp(pts[dest][0]-S[0],pts[dest][1]-S[1])/vw;if(T<best){best=T;bTh=th;}}return bTh}
-/* -------- terrain ---- */
-function terrain(pts,tDest,vw,vr,R,N){const ax=[...Array(N).keys()].map(i=>i*BOX/(N-1)),Z=Array.from({length:N},()=>Array(N));for(let ix=0;ix<N;ix++)for(let iy=0;iy<N;iy++){const x=ax[ix],y=ax[iy];let best=hp(x-pts[0][0],y-pts[0][1])/vw;for(let p=0;p<pts.length;p++){if(!isFinite(tDest[p]))continue;const c=hp(x-pts[p][0],y-pts[p][1])/vw+tDest[p];if(c<best)best=c;}for(const e of R){const P=e.p,Q=e.q,v=[Q[0]-P[0],Q[1]-P[1]],len2=v[0]*v[0]+v[1]*v[1];if(!len2)continue;let w=((x-P[0])*v[0]+(y-P[1])*v[1])/len2;w=Math.max(0,Math.min(1,w));const xp=P[0]+w*v[0],yp=P[1]+w*v[1],walk=hp(x-xp,y-yp)/vw,dProj=w*e.d,dRem=e.d-dProj,bestEdge=Math.min(dProj/vr+tDest[e.i],dRem/vr+tDest[e.j]);best=Math.min(best,walk+bestEdge);}Z[iy][ix]=best;}return{ax,Z}}
-/* -------- plots ---- */
-function srf(id,t,title){Plotly.newPlot(id,[{z:t.Z,x:t.ax,y:t.ax,type:'surface',colorscale:'Turbo',showscale:false}],{title,font:{color:'#eee'},scene:{xaxis:{title:'x'},yaxis:{title:'y'},zaxis:{title:'t'}},paper_bgcolor:'#111',plot_bgcolor:'#111'})}
-function map(id,S,pts,R,pathL,pathF,nk){const tr=[];R.forEach(e=>tr.push({x:[e.p[0],e.q[0]],y:[e.p[1],e.q[1]],mode:'lines',line:{color:'#777',width:1},opacity:.35,showlegend:false,hoverinfo:'skip'}));const unk=[...Array(pts.length).keys()].slice(nk);if(unk.length)tr.push({x:unk.map(i=>pts[i][0]),y:unk.map(i=>pts[i][1]),mode:'markers',marker:{symbol:'circle-open',size:10,color:'#2ecc71'},name:'Unknown'});tr.push({x:[pts[0][0]],y:[pts[0][1]],mode:'markers',marker:{symbol:'diamond',size:12,color:'#3498db'},name:'Dest'},{x:[S[0]],y:[S[1]],mode:'markers',marker:{symbol:'square',size:12,color:'#e74c3c'},name:'Start'},{x:pathL.map(p=>p[0]),y:pathL.map(p=>p[1]),mode:'lines',line:{width:3,color:'#e91e63'},name:'Limited'},{x:pathF.map(p=>p[0]),y:pathF.map(p=>p[1]),mode:'lines',line:{width:3,color:'#00e5ff'},name:'Full'});Plotly.newPlot(id,tr,{title:'World',font:{color:'#eee'},xaxis:{range:[0,BOX],fixedrange:true},yaxis:{range:[0,BOX],scaleanchor:'x',fixedrange:true},paper_bgcolor:'#111',plot_bgcolor:'#111'})}
-/* -------- driver ---- */
-async function run(){btn.disabled=true;const nk=+nkInp.value,nu=+nuInp.value,vw=+vwInp.value,vr=+vrInp.value,N=+gNInp.value,S=randPt(BOX),pts=Array.from({length:nk+nu},()=>randPt(BOX)),dest=0,lim=net([...Array(nk).keys()],pts,vr),ful=net([...Array(pts.length).keys()],pts,vr),tF=floyd(ful.W).map(r=>r[dest]),tL=floyd(lim.W).map(r=>r[dest]).concat(Array(nu).fill(Infinity));const thL=optHead(S,lim.r,pts,vw,vr,dest,tL),thF=optHead(S,ful.r,pts,vw,vr,dest,tF);const dirL=[Math.cos(thL),Math.sin(thL)],dirF=[Math.cos(thF),Math.sin(thF)],hitL=ray(S,dirL,lim.r).h||[S[0]+dirL[0]*50,S[1]+dirL[1]*50],hitF=ray(S,dirF,ful.r).h||[S[0]+dirF[0]*50,S[1]+dirF[1]*50];srf('tLim',terrain(pts,tL,vw,vr,lim.r,N),'Limited');srf('tFull',terrain(pts,tF,vw,vr,ful.r,N),'Full');map('world',S,pts,ful.r,[S,hitL],[S,hitF],nk);btn.disabled=false}
-const nkInp=document.getElementById('nk'),nuInp=document.getElementById('nu'),vwInp=document.getElementById('vw'),vrInp=document.getElementById('vr'),gNInp=document.getElementById('gN'),btn=document.getElementById('run');btn.onclick=run;
+/* ===== Basics ===== */
+const BOX = 1e3, RES = 720;
+const rand = (a,b) => Math.random()*(b-a)+a;
+const hp = (x,y) => Math.hypot(x,y);
+const randPt = (box) => [rand(0,box), rand(0,box)]; // <<< missing in your version
+
+/* ===== Road network ===== */
+function net(mask, pts, vR) {
+  const n = pts.length, r = [];
+  const W = Array.from({length:n}, (_,i)=>Array(n).fill(Infinity).map((v,j)=>i===j?0:v));
+  for (let a=0;a<mask.length;a++) {
+    const i = mask[a];
+    for (let b=0;b<a;b++) {
+      const j = mask[b], p = pts[i], q = pts[j];
+      const d = hp(p[0]-q[0], p[1]-q[1]);
+      W[i][j] = W[j][i] = d / vR;
+      r.push({ p, q, i, j, d });
+    }
+  }
+  return { r, W };
+}
+function floyd(D) {
+  const n = D.length, M = D.map(row=>row.slice());
+  for (let k=0;k<n;k++) for (let i=0;i<n;i++) for (let j=0;j<n;j++) {
+    const v = M[i][k] + M[k][j];
+    if (v < M[i][j]) M[i][j] = v;
+  }
+  return M;
+}
+
+/* ===== Geometry & heading search ===== */
+function ray(S, dir, R) {
+  let h = null, t = 1e9;
+  for (const e of R) {
+    const P=e.p, Q=e.q, w=[Q[0]-P[0], Q[1]-P[1]];
+    const A=[[dir[0],-w[0]], [dir[1],-w[1]]];
+    const b=[P[0]-S[0], P[1]-S[1]];
+    const det = A[0][0]*A[1][1] - A[0][1]*A[1][0];
+    if (Math.abs(det) < 1e-12) continue;
+    const ti=(b[0]*A[1][1]-b[1]*A[0][1])/det, ui=(A[0][0]*b[1]-A[1][0]*b[0])/det;
+    if (ti>0 && ui>=0 && ui<=1 && ti<t) { t=ti; h=[S[0]+ti*dir[0], S[1]+ti*dir[1]]; }
+  }
+  return { h, t };
+}
+function hybrid(r, hit, R, vW, vR, tDest) {
+  let best = 1e9;
+  for (const e of R) {
+    const d1 = hp(hit[0]-e.p[0], hit[1]-e.p[1]);
+    const d2 = e.d - d1;
+    best = Math.min(best,
+      d1/vR + tDest[e.i],
+      d2/vR + tDest[e.j]
+    );
+  }
+  return r/vW + best;
+}
+function optHead(S, R, pts, vW, vR, dest, tDest) {
+  let best = 1e9, bTh = 0;
+  for (let k=0;k<RES;k++) {
+    const th = k*2*Math.PI/RES, dir=[Math.cos(th), Math.sin(th)];
+    const {h,t} = ray(S, dir, R);
+    const T = h ? hybrid(t, h, R, vW, vR, tDest)
+                : hp(pts[dest][0]-S[0], pts[dest][1]-S[1]) / vW;
+    if (T < best) { best=T; bTh=th; }
+  }
+  return bTh;
+}
+
+/* ===== Time terrain (with road “valleys”) ===== */
+function terrain(pts, tDest, vW, vR, R, N) {
+  const ax=[...Array(N).keys()].map(i=>i*BOX/(N-1));
+  const Z=Array.from({length:N},()=>Array(N));
+  for (let ix=0; ix<N; ix++) for (let iy=0; iy<N; iy++) {
+    const x=ax[ix], y=ax[iy];
+    // direct to dest
+    let best = hp(x-pts[0][0], y-pts[0][1]) / vW;
+    // via POIs
+    for (let p=0; p<pts.length; p++) {
+      if (!isFinite(tDest[p])) continue;
+      const c = hp(x-pts[p][0], y-pts[p][1]) / vW + tDest[p];
+      if (c < best) best = c;
+    }
+    // via any point along each road
+    for (const e of R) {
+      const P=e.p, Q=e.q, v=[Q[0]-P[0], Q[1]-P[1]];
+      const len2 = v[0]*v[0] + v[1]*v[1];
+      if (!len2) continue;
+      let w=((x-P[0])*v[0] + (y-P[1])*v[1]) / len2;
+      w = Math.max(0, Math.min(1, w));
+      const xp=P[0]+w*v[0], yp=P[1]+w*v[1];
+      const walk = hp(x-xp, y-yp) / vW;
+      const dProj = w * e.d, dRem = e.d - dProj;
+      const bestEdge = Math.min(dProj/vR + tDest[e.i], dRem/vR + tDest[e.j]);
+      best = Math.min(best, walk + bestEdge);
+    }
+    Z[iy][ix] = best;
+  }
+  return { ax, Z };
+}
+
+/* ===== Plot helpers ===== */
+function srf(id, t, titleText) {
+  Plotly.newPlot(id, [{
+    z:t.Z, x:t.ax, y:t.ax, type:'surface', colorscale:'Turbo', showscale:false
+  }], {
+    title: titleText,
+    font:{color:'#eee'},
+    scene:{xaxis:{title:'x'}, yaxis:{title:'y'}, zaxis:{title:'t'}},
+    paper_bgcolor:'#111', plot_bgcolor:'#111'
+  }, {responsive:true});
+}
+function map(id, S, pts, R, pathL, pathF, nk) {
+  const tr=[];
+  // roads
+  R.forEach(e => tr.push({x:[e.p[0],e.q[0]], y:[e.p[1],e.q[1]], mode:'lines',
+                          line:{color:'#777',width:1}, opacity:.35, showlegend:false, hoverinfo:'skip'}));
+  // unknown POIs
+  const unk=[...Array(pts.length).keys()].slice(nk);
+  if (unk.length) tr.push({x:unk.map(i=>pts[i][0]), y:unk.map(i=>pts[i][1]), mode:'markers',
+                           marker:{symbol:'circle-open',size:10,color:'#2ecc71'}, name:'Unknown'});
+  // points & paths
+  tr.push(
+    {x:[pts[0][0]], y:[pts[0][1]], mode:'markers', marker:{symbol:'diamond',size:12,color:'#3498db'}, name:'Dest'},
+    {x:[S[0]],      y:[S[1]],      mode:'markers', marker:{symbol:'square', size:12,color:'#e74c3c'}, name:'Start'},
+    {x:pathL.map(p=>p[0]), y:pathL.map(p=>p[1]), mode:'lines', line:{width:3,color:'#e91e63'}, name:'Limited'},
+    {x:pathF.map(p=>p[0]), y:pathF.map(p=>p[1]), mode:'lines', line:{width:3,color:'#00e5ff'}, name:'Full'}
+  );
+  Plotly.newPlot(id, tr, {
+    title:'World',
+    font:{color:'#eee'},
+    xaxis:{range:[0,BOX], fixedrange:true},
+    yaxis:{range:[0,BOX], scaleanchor:'x', fixedrange:true},
+    paper_bgcolor:'#111', plot_bgcolor:'#111'
+  }, {responsive:true});
+}
+
+/* ===== Run driver ===== */
+async function run() {
+  btn.disabled = true;
+
+  const nk = +nkInp.value, nu = +nuInp.value, vW = +vwInp.value, vR = +vrInp.value, N = +gNInp.value;
+  const S = randPt(BOX);
+  const pts = Array.from({length:nk+nu}, () => randPt(BOX));
+  const dest = 0;
+
+  const lim = net([...Array(nk).keys()], pts, vR);
+  const ful = net([...Array(pts.length).keys()], pts, vR);
+
+  const tF = floyd(ful.W).map(r => r[dest]);
+  const tL = floyd(lim.W).map(r => r[dest]).concat(Array(nu).fill(Infinity));
+
+  const thL = optHead(S, lim.r, pts, vW, vR, dest, tL);
+  const thF = optHead(S, ful.r, pts, vW, vR, dest, tF);
+
+  const dirL=[Math.cos(thL), Math.sin(thL)];
+  const dirF=[Math.cos(thF), Math.sin(thF)];
+
+  const hitL = ray(S, dirL, lim.r).h || [S[0]+dirL[0]*50, S[1]+dirL[1]*50];
+  const hitF = ray(S, dirF, ful.r).h || [S[0]+dirF[0]*50, S[1]+dirF[1]*50];
+
+  srf('tLim',  terrain(pts, tL, vW, vR, lim.r, N),  'Limited');
+  srf('tFull', terrain(pts, tF, vW, vR, ful.r, N), 'Full');
+  map('world', S, pts, ful.r, [S, hitL], [S, hitF], nk);
+
+  btn.disabled = false;
+}
+
+/* DOM wires */
+const nkInp = document.getElementById('nk');
+const nuInp = document.getElementById('nu');
+const vwInp = document.getElementById('vw');
+const vrInp = document.getElementById('vr');
+const gNInp = document.getElementById('gN');
+const btn   = document.getElementById('run');
+
+btn.addEventListener('click', () => {
+  try { run(); } catch (e) { console.error(e); btn.disabled=false; }
+});
+
+// Optional: auto-run once on load
+document.addEventListener('DOMContentLoaded', () => { try { run(); } catch(e) { console.error(e); } });
 </script>
-</body></html>
+
+<style>
+body { background:#111; color:#eee; }
+h1, h2, h3 { color:#eee; }
+</style>
