@@ -1,33 +1,58 @@
 <!-- _includes/footer.html -->
 <footer class="site-footer">
-<form id="subscribe-form">
-  <input type="email" id="subscriber-email" placeholder="Enter your email" required>
-  <button type="submit">Subscribe</button>
-</form>
-<div id="subscribe-message"></div>
+  <form id="subscribe-form" novalidate>
+    <input type="email" id="subscriber-email" placeholder="Enter your email" required>
+    <!-- Honeypot for bots -->
+    <input type="text" id="website" name="website" style="display:none">
+    <button type="submit">Subscribe</button>
+  </form>
+  <div id="subscribe-message" role="status" aria-live="polite"></div>
 
-<script>
-  document.getElementById("subscribe-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const emailField = document.getElementById("subscriber-email");
-    const email = emailField.value.trim();
-    if (!email) return;
-    
-    try {
-      const response = await fetch("https://subscriber-api-lolroxs.vercel.app/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const form  = document.getElementById('subscribe-form');
+      if (!form) return;
+      const input = document.getElementById('subscriber-email');
+      const honey = document.getElementById('website');
+      const msg   = document.getElementById('subscribe-message');
+      const btn   = form.querySelector('button');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (input.value || '').trim().toLowerCase();
+
+        if (honey && honey.value) return; // bot
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+          msg.textContent = 'Please enter a valid email address.';
+          return;
+        }
+
+        btn.disabled = true;
+        msg.textContent = 'Subscribing...';
+
+        try {
+          const res = await fetch('https://subscriber-api-lolroxs.vercel.app/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+            mode: 'cors',
+            credentials: 'omit'
+          });
+
+          let data = null;
+          try { data = await res.json(); } catch (_) {}
+
+          if (!res.ok) throw new Error((data && data.message) || `HTTP ${res.status}`);
+
+          msg.textContent = (data && data.message) || 'Subscribed!';
+          input.value = '';
+        } catch (err) {
+          console.error(err);
+          msg.textContent = 'Subscription failed. Please try again later.';
+        } finally {
+          btn.disabled = false;
+        }
       });
-      const data = await response.json();
-      document.getElementById("subscribe-message").innerText = data.message || "Subscribed!";
-      if (response.ok) {
-        emailField.value = ""; // Clear the input field on success
-      }
-    } catch (err) {
-      console.error(err);
-      document.getElementById("subscribe-message").innerText = "Subscription failed. Please try again.";
-    }
-  });
-</script>
+    });
+  </script>
 </footer>
