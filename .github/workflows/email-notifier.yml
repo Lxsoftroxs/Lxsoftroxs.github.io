@@ -46,18 +46,19 @@ jobs:
           NEW_POST=$(git diff --name-only --diff-filter=A "${{ github.event.before }}" "${{ github.sha }}" -- '_posts/*.md' | head -n1)
 
           if [[ -z "$NEW_POST" ]]; then
-            echo "No new post added – skipping notification."
+            echo "No new post added - skipping notification."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Extract title from front matter (handles quoted/unquoted)
-          TITLE=$(awk '/^title:/ { sub(/^title:[[:space:]]*/,""); gsub(/^["'\''"]|["'\''"]$/,""); print; exit }' "$NEW_POST")
+          # Extract Title (handles quoted or unquoted)
+          TITLE=$(sed -n 's/^title:[[:space:]]*"\{0,1\}\(.*\)"\{0,1\}$/\1/p' "$NEW_POST" | head -n1)
 
           # Prefer a front-matter permalink if present
-          PERMALINE=$(awk '/^permalink:/ { print $2; exit }' "$NEW_POST")
-          if [[ -n "$PERMALINE" ]]; then
-            URL="https://lxsoftroxs.github.io${PERMALINE}"
+          PERMALINK=$(sed -n 's/^permalink:[[:space:]]*\(.*\)$/\1/p' "$NEW_POST" | head -n1)
+
+          if [[ -n "$PERMALINK" ]]; then
+            URL="https://lxsoftroxs.github.io${PERMALINK}"
           else
             # Default Jekyll-style URL from filename
             FILENAME="${NEW_POST##*/}"
@@ -72,7 +73,7 @@ jobs:
           echo "skip=false"        >> "$GITHUB_OUTPUT"
 
       - name: Send notification emails
-        if: steps.detect.outputs.skip == 'false'
+        if: ${{ steps.detect.outputs.skip == 'false' }}
         env:
           FROM: ${{ secrets.EMAIL_USER }}
         shell: bash
@@ -106,6 +107,6 @@ A new post just went live:
 ${POST_TITLE}
 ${POST_URL}
 
-(You’re receiving this because you subscribed at https://lxsoftroxs.github.io/subscribe/.)
+(You are receiving this because you subscribed at https://lxsoftroxs.github.io/subscribe/.)
 EOF
           done < /tmp/subs.txt
