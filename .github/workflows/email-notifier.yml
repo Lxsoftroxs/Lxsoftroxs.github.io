@@ -2,89 +2,110 @@ name: Notify Subscribers of New Content
 
 on:
   push:
-    # Only run if a commit touches the _posts folder
+    branches: [ main ]
     paths:
       - "_posts/**"
-    branches:
-      - main
 
 jobs:
   notify:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout the repository
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2. Install msmtp (mail) and jq (JSON parsing)
       - name: Install msmtp and jq
         run: |
           sudo apt-get update
           sudo apt-get install -y msmtp jq
 
-      # 3. Configure msmtp with your Gmail credentials (stored in repo secrets)
       - name: Configure msmtp
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         run: |
-          cat <<EOF > ~/.msmtprc
+          cat > ~/.msmtprc <<'EOF'
           account default
           host smtp.gmail.com
           port 587
           auth on
           tls on
           tls_starttls on
-          user ${{ secrets.EMAIL_USER }}
-          password ${{ secrets.EMAIL_PASS }}
-          from ${{ secrets.EMAIL_USER }}
+          user ${EMAIL_USER}
+          password ${EMAIL_PASS}
+          from ${EMAIL_USER}
           logfile ~/.msmtp.log
           EOF
           chmod 600 ~/.msmtprc
 
-      # 4. Build the subscriber email list (comma-separated)
-      - name: Fetch subscribers
-        run: |
-          if [ -f subscribers.json ]; then
-            emails=$(jq -r '.[]' subscribers.json | paste -sd, -)
-            echo "EMAIL_LIST=$emails" >> $GITHUB_ENV
-          else
-            echo "EMAIL_LIST=" >> $GITHUB_ENV
-          fi
-
-      # 5. Identify any brand-new post file added in THIS push
       - name: Detect new post
         id: detect
+        shell: bash
         run: |
-          # Look for files added (A) between the previous and current commit
+          # Find any brand-new post added in this push
           NEW_POST=$(git diff --name-only --diff-filter=A "${{ github.event.before }}" "${{ github.sha }}" -- '_posts/*.md' | head -n1)
 
-          if [ -z "$NEW_POST" ]; then
+          if [[ -z "$NEW_POST" ]]; then
             echo "No new post added – skipping notification."
-            echo "skip=true" >> $GITHUB_OUTPUT
-            exit 0    # Exit early (job succeeds, but later steps are skipped)
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-          # Extract post title from YAML front matter
-          TITLE=$(grep -m1 '^title:' "$NEW_POST" | sed 's/^title:[[:space:]]*["'\'']\?\(.*\)["'\'']\?$/\1/')
+          # Extract title from front matter (handles quoted/unquoted)
+          TITLE=$(awk '/^title:/ { sub(/^title:[[:space:]]*/,""); gsub(/^["'\''"]|["'\''"]$/,""); print; exit }' "$NEW_POST")
 
-          # Build URL: _posts/YYYY-MM-DD-slug.md → /YYYY/MM/DD/slug.html
-          FILENAME=$(basename "$NEW_POST" .md)
-          YEAR=$(echo "$FILENAME" | cut -d'-' -f1)
-          MONTH=$(echo "$FILENAME" | cut -d'-' -f2)
-          DAY=$(echo "$FILENAME" | cut -d'-' -f3)
-          SLUG=$(echo "$FILENAME" | cut -d'-' -f4-)
-          URL="https://lxsoftroxs.github.io/$YEAR/$MONTH/$DAY/$SLUG.html"
+          # Prefer a front-matter permalink if present
+          PERMALINE=$(awk '/^permalink:/ { print $2; exit }' "$NEW_POST")
+          if [[ -n "$PERMALINE" ]]; then
+            URL="https://lxsoftroxs.github.io${PERMALINE}"
+          else
+            # Default Jekyll-style URL from filename
+            FILENAME="${NEW_POST##*/}"
+            STEM="${FILENAME%.md}"
+            IFS='-' read -r YEAR MONTH DAY REST <<< "$STEM"
+            SLUG="$REST"
+            URL="https://lxsoftroxs.github.io/$YEAR/$MONTH/$DAY/$SLUG.html"
+          fi
 
-          echo "POST_TITLE=$TITLE"   >> $GITHUB_ENV
-          echo "POST_URL=$URL"       >> $GITHUB_ENV
-          echo "skip=false"          >> $GITHUB_OUTPUT
+          echo "POST_TITLE=$TITLE" >> "$GITHUB_ENV"
+          echo "POST_URL=$URL"     >> "$GITHUB_ENV"
+          echo "skip=false"        >> "$GITHUB_OUTPUT"
 
-      # 6. Send the email (only if we found a new post AND there are subscribers)
-      - name: Send notification email
-        if: steps.detect.outputs.skip == 'false' && env.EMAIL_LIST != ''
+      - name: Send notification emails
+        if: steps.detect.outputs.skip == 'false'
+        env:
+          FROM: ${{ secrets.EMAIL_USER }}
+        shell: bash
         run: |
-          cat <<EOF | msmtp -a default "${{ env.EMAIL_LIST }}"
-          Subject: New Post: ${POST_TITLE}
+          # Build a deduped, lowercased list from subscribers.json (array of strings)
+          if [[ -f subscribers.json ]]; then
+            jq -r 'map(ascii_downcase) | unique | .[]' subscribers.json > /tmp/subs.txt || true
+          fi
 
-          Check out the new post: "${POST_TITLE}"
-          ${POST_URL}
-          EOF
+          if [[ ! -s /tmp/subs.txt ]]; then
+            echo "No subscribers; nothing to send."
+            exit 0
+          fi
+
+          # Simple email pattern to skip obvious bad entries
+          EMAIL_RE='^[^[:space:]@]+@[^[:space:]]+\.[^[:space:]]+$'
+
+          while IFS= read -r addr; do
+            [[ "$addr" =~ $EMAIL_RE ]] || { echo "Skipping invalid: $addr"; continue; }
+
+            # Compose headers+body and let msmtp parse recipients with -t
+            cat <<EOF | msmtp -a default -t
+To: $addr
+From: $FROM
+Subject: New Post: ${POST_TITLE}
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+A new post just went live:
+
+${POST_TITLE}
+${POST_URL}
+
+(You’re receiving this because you subscribed at https://lxsoftroxs.github.io/subscribe/.)
+EOF
+          done < /tmp/subs.txt
