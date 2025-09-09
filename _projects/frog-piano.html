@@ -6,43 +6,66 @@ permalink: /projects/frog-piano/
 
 <div id="frog-piano-container">
   <h2>Frog Piano</h2>
-  <p>Click/tap a key (or press A S D F G). If sound is blocked, tap “Enable Sound”.</p>
-  <button id="start-audio" style="display:none; margin-bottom:8px;">Enable Sound</button>
+  <p>Click or tap a key (or press A S D F G). If sound is blocked, tap "Enable Sound".</p>
+  <button id="start-audio" style="display:none;margin-bottom:8px;">Enable Sound</button>
 </div>
 
+<!-- p5 core + sound addon (required for oscillators / WebAudio) -->
 <script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/addons/p5.sound.min.js"></script>
+
 <script>
-  // ---- Config ----
+  // ---------- Config ----------
   const NOTE_MAP = [
-    { name: 'C', freq: 261.63, key: 'a' },
-    { name: 'D', freq: 293.66, key: 's' },
-    { name: 'E', freq: 329.63, key: 'd' },
-    { name: 'F', freq: 349.23, key: 'f' },
-    { name: 'G', freq: 392.00, key: 'g' },
+    { name: "C", freq: 261.63, key: "a" },
+    { name: "D", freq: 293.66, key: "s" },
+    { name: "E", freq: 329.63, key: "d" },
+    { name: "F", freq: 349.23, key: "f" },
+    { name: "G", freq: 392.00, key: "g" }
   ];
-  const PIANO_HEIGHT = 90;   // px
-  const HOP_VY =  -11;       // initial jump velocity
+  const PIANO_HEIGHT = 90;
+  const HOP_VY = -11;
   const GRAVITY = 0.45;
-  const MAX_VX = 6;          // horizontal clamp
-  const ATTACK = 0.02;       // seconds
-  const RELEASE = 0.35;      // seconds
+  const MAX_VX = 6;
+  const ATTACK = 0.02;   // seconds
+  const RELEASE = 0.35;  // seconds
 
-  // ---- State ----
-  let keys = [];       // {x,y,w,h, note:{name,freq}, activeUntil:ms}
-  let osc;             // p5.Oscillator
-  let frog;            // {x,y,vx,vy,r,onGround}
-  let keysY;           // y of keyboard top
-  let cnv;
+  // ---------- State ----------
+  let keys = [];   // {x,y,w,h,note,activeUntil}
+  let osc = null;  // p5.Oscillator (lazy-created)
+  let frog = null; // {x,y,vx,vy,r,onGround}
+  let keysY = 0;
+  let cnv = null;
 
-  function safeStartAudio() {
+  function ensureAudioReady() {
     try { userStartAudio(); } catch(_) {}
-    const ctx = getAudioContext && getAudioContext();
-    if (ctx && ctx.state !== 'running') ctx.resume?.();
-    const btn = document.getElementById('start-audio');
-    if (btn) btn.style.display = 'none';
+    const ctx = (typeof getAudioContext === "function") ? getAudioContext() : null;
+    if (ctx && ctx.state !== "running" && ctx.resume) ctx.resume();
+
+    if (!osc) {
+      // create oscillator only after a user gesture or explicit click
+      osc = new p5.Oscillator("sine");
+      osc.start();
+      osc.amp(0);
+    }
+    const btn = document.getElementById("start-audio");
+    if (btn) btn.style.display = "none";
   }
 
-  function buildLayout() {
+  function createOrResizeCanvas() {
+    const container = document.getElementById("frog-piano-container");
+    const maxW = Math.min((container && container.clientWidth) ? container.clientWidth : 600, 800);
+    const w = Math.max(360, maxW);
+    const h = Math.round(w * 0.66); // 3:2 aspect
+    if (!cnv) {
+      cnv = createCanvas(w, h);
+      cnv.parent("frog-piano-container");
+    } else {
+      resizeCanvas(w, h);
+    }
+  }
+
+  function buildKeyboard() {
     keys = [];
     keysY = height - PIANO_HEIGHT;
     const keyW = width / NOTE_MAP.length;
@@ -53,35 +76,15 @@ permalink: /projects/frog-piano/
         w: keyW,
         h: PIANO_HEIGHT,
         note: NOTE_MAP[i],
-        activeUntil: 0,
+        activeUntil: 0
       });
-    }
-  }
-
-  function createOrResizeCanvas() {
-    // responsive to container width, max 800
-    const container = document.getElementById('frog-piano-container');
-    const maxW = Math.min(container.clientWidth || 600, 800);
-    const w = Math.max(360, maxW);
-    const h = Math.round(w * 0.66); // 3:2 aspect
-    if (!cnv) {
-      cnv = createCanvas(w, h);
-      cnv.parent('frog-piano-container');
-    } else {
-      resizeCanvas(w, h);
     }
   }
 
   function setup() {
     createOrResizeCanvas();
-    buildLayout();
+    buildKeyboard();
 
-    // Oscillator
-    osc = new p5.Oscillator('sine');
-    osc.start();
-    osc.amp(0);
-
-    // Frog starts sitting on the keyboard
     frog = {
       x: width * 0.5,
       y: keysY - 20,
@@ -91,22 +94,22 @@ permalink: /projects/frog-piano/
       onGround: true
     };
 
-    // Audio unlock helper button (shown if needed)
-    const btn = document.getElementById('start-audio');
-    const ctx = getAudioContext && getAudioContext();
-    if (btn && ctx && ctx.state !== 'running') {
-      btn.style.display = 'inline-block';
-      btn.addEventListener('click', safeStartAudio);
+    // Show "Enable Sound" if AudioContext is not running yet
+    const btn = document.getElementById("start-audio");
+    const ctx = (typeof getAudioContext === "function") ? getAudioContext() : null;
+    if (btn && ctx && ctx.state !== "running") {
+      btn.style.display = "inline-block";
+      btn.addEventListener("click", ensureAudioReady);
     }
 
-    // prevent text selection while clicking
-    document.getElementById('frog-piano-container').onmousedown = e => e.preventDefault();
+    // Avoid text selection while interacting
+    const wrap = document.getElementById("frog-piano-container");
+    if (wrap) wrap.onmousedown = (e) => e.preventDefault();
   }
 
   function windowResized() {
     createOrResizeCanvas();
-    buildLayout();
-    // keep frog above keys
+    buildKeyboard();
     frog.y = Math.min(frog.y, keysY - frog.r);
   }
 
@@ -114,28 +117,23 @@ permalink: /projects/frog-piano/
     textAlign(CENTER, CENTER);
     textSize(16);
     for (const k of keys) {
-      // key fill: active flash
       const active = millis() < k.activeUntil;
       stroke(60);
       strokeWeight(2);
       fill(active ? 230 : 250);
       rect(k.x, k.y, k.w, k.h);
-
-      // key labels
       noStroke();
       fill(40);
-      text(k.note.name, k.x + k.w/2, k.y + k.h - 22);
+      text(k.note.name, k.x + k.w / 2, k.y + k.h - 22);
       fill(110);
-      text(k.note.key.toUpperCase(), k.x + k.w/2, k.y + k.h - 6);
+      text(k.note.key.toUpperCase(), k.x + k.w / 2, k.y + k.h - 6);
     }
   }
 
   function drawFrog() {
-    // body
     noStroke();
     fill(34, 180, 34);
     ellipse(frog.x, frog.y, frog.r * 2);
-
     // eyes
     fill(255);
     ellipse(frog.x - 7, frog.y - 10, 10, 10);
@@ -151,11 +149,11 @@ permalink: /projects/frog-piano/
       frog.x  += frog.vx;
       frog.y  += frog.vy;
 
-      // floor (keyboard top)
+      // landing on the keys
       if (frog.y + frog.r >= keysY) {
         frog.y = keysY - frog.r;
         frog.vy = 0;
-        frog.vx *= 0.4; // friction
+        frog.vx *= 0.4;
         frog.onGround = true;
       }
 
@@ -176,21 +174,22 @@ permalink: /projects/frog-piano/
     noStroke();
     textAlign(CENTER);
     textSize(14);
-    text("Click keys or press A S D F G", width/2, 24);
+    text("Click keys or press A S D F G", width / 2, 24);
   }
 
   function activateKey(i) {
     const k = keys[i];
     if (!k) return;
 
-    // Audio unlock & play
-    safeStartAudio();
-    osc.freq(k.note.freq);
-    osc.amp(0.6, ATTACK);
+    ensureAudioReady();
+    if (osc) {
+      osc.freq(k.note.freq);
+      osc.amp(0.6, ATTACK);
+    }
     k.activeUntil = millis() + 150;
 
-    // Hop towards the key
-    const targetX = k.x + k.w/2;
+    // hop towards this key
+    const targetX = k.x + k.w / 2;
     const dx = targetX - frog.x;
     frog.vx = constrain(dx / 12, -MAX_VX, MAX_VX);
     frog.vy = HOP_VY - random(0, 2.5);
@@ -208,18 +207,18 @@ permalink: /projects/frog-piano/
     }
     return false;
   }
-  function mouseReleased() { osc.amp(0, RELEASE); }
+  function mouseReleased() { if (osc) osc.amp(0, RELEASE); }
   function touchStarted()  { return mousePressed(); }
   function touchEnded()    { mouseReleased(); return false; }
 
-  // Keyboard: A S D F G
+  // Keyboard (A S D F G)
   function keyPressed() {
-    const ch = (key || '').toLowerCase();
+    const ch = (key || "").toLowerCase();
     const idx = NOTE_MAP.findIndex(n => n.key === ch);
     if (idx >= 0) activateKey(idx);
   }
   function keyReleased() {
-    const ch = (key || '').toLowerCase();
-    if (NOTE_MAP.some(n => n.key === ch)) osc.amp(0, RELEASE);
+    const ch = (key || "").toLowerCase();
+    if (NOTE_MAP.some(n => n.key === ch)) { if (osc) osc.amp(0, RELEASE); }
   }
 </script>
