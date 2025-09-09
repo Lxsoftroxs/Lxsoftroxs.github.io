@@ -5,8 +5,10 @@ date: 2023-11-30
 ---
 
 UC
+
 350 words
-								
+
+		
 Please describe how you have prepared for your intended major, including your readiness to succeed in your upper-division courses once you enroll at the university.
 
 	Structured education, a blessing and a curse. Started as an advanced daycare once the Industrial Revolution began, it evolved into a global competition to reach supremacy in the job market. The value of education in the individual has declined as the structured nature reproduces the same knowledge across different contexts. Recognizing these limitations, I paved my own path, preparing myself for success at UC. 
