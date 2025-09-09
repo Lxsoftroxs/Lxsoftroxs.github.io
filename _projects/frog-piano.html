@@ -6,114 +6,220 @@ permalink: /projects/frog-piano/
 
 <div id="frog-piano-container">
   <h2>Frog Piano</h2>
-  <!-- optional instructions -->
-  <p>Click on a key to play a note. The frog will hop around on top!</p>
+  <p>Click/tap a key (or press A S D F G). If sound is blocked, tap “Enable Sound”.</p>
+  <button id="start-audio" style="display:none; margin-bottom:8px;">Enable Sound</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.min.js"></script>
 <script>
-  let keys = [];
-  let notes = [261.63, 293.66, 329.63, 349.23, 392.00]; // C, D, E, F, G
-  let osc;  // p5 oscillator
-  let frog;
-  let gravity = 0.3;
+  // ---- Config ----
+  const NOTE_MAP = [
+    { name: 'C', freq: 261.63, key: 'a' },
+    { name: 'D', freq: 293.66, key: 's' },
+    { name: 'E', freq: 329.63, key: 'd' },
+    { name: 'F', freq: 349.23, key: 'f' },
+    { name: 'G', freq: 392.00, key: 'g' },
+  ];
+  const PIANO_HEIGHT = 90;   // px
+  const HOP_VY =  -11;       // initial jump velocity
+  const GRAVITY = 0.45;
+  const MAX_VX = 6;          // horizontal clamp
+  const ATTACK = 0.02;       // seconds
+  const RELEASE = 0.35;      // seconds
 
-  function setup() {
-    // Create a canvas, attach it to the #frog-piano-container div
-    let cnv = createCanvas(600, 400);
-    cnv.parent('frog-piano-container');
+  // ---- State ----
+  let keys = [];       // {x,y,w,h, note:{name,freq}, activeUntil:ms}
+  let osc;             // p5.Oscillator
+  let frog;            // {x,y,vx,vy,r,onGround}
+  let keysY;           // y of keyboard top
+  let cnv;
 
-    // Build piano keys along bottom
-    let keyWidth = width / notes.length;
-    for (let i = 0; i < notes.length; i++) {
+  function safeStartAudio() {
+    try { userStartAudio(); } catch(_) {}
+    const ctx = getAudioContext && getAudioContext();
+    if (ctx && ctx.state !== 'running') ctx.resume?.();
+    const btn = document.getElementById('start-audio');
+    if (btn) btn.style.display = 'none';
+  }
+
+  function buildLayout() {
+    keys = [];
+    keysY = height - PIANO_HEIGHT;
+    const keyW = width / NOTE_MAP.length;
+    for (let i = 0; i < NOTE_MAP.length; i++) {
       keys.push({
-        x: i * keyWidth,
-        y: height - 80,
-        w: keyWidth,
-        h: 80,
-        note: notes[i]
+        x: i * keyW,
+        y: keysY,
+        w: keyW,
+        h: PIANO_HEIGHT,
+        note: NOTE_MAP[i],
+        activeUntil: 0,
       });
     }
+  }
 
-    // Set up a sine wave oscillator
+  function createOrResizeCanvas() {
+    // responsive to container width, max 800
+    const container = document.getElementById('frog-piano-container');
+    const maxW = Math.min(container.clientWidth || 600, 800);
+    const w = Math.max(360, maxW);
+    const h = Math.round(w * 0.66); // 3:2 aspect
+    if (!cnv) {
+      cnv = createCanvas(w, h);
+      cnv.parent('frog-piano-container');
+    } else {
+      resizeCanvas(w, h);
+    }
+  }
+
+  function setup() {
+    createOrResizeCanvas();
+    buildLayout();
+
+    // Oscillator
     osc = new p5.Oscillator('sine');
     osc.start();
     osc.amp(0);
 
-    // Initialize frog near top of piano
+    // Frog starts sitting on the keyboard
     frog = {
-      x: random(width),
-      y: keys[0].y - 20,
+      x: width * 0.5,
+      y: keysY - 20,
       vx: 0,
       vy: 0,
       r: 20,
-      onGround: true,
-      timeToNextJump: millis() + 2000
+      onGround: true
     };
+
+    // Audio unlock helper button (shown if needed)
+    const btn = document.getElementById('start-audio');
+    const ctx = getAudioContext && getAudioContext();
+    if (btn && ctx && ctx.state !== 'running') {
+      btn.style.display = 'inline-block';
+      btn.addEventListener('click', safeStartAudio);
+    }
+
+    // prevent text selection while clicking
+    document.getElementById('frog-piano-container').onmousedown = e => e.preventDefault();
+  }
+
+  function windowResized() {
+    createOrResizeCanvas();
+    buildLayout();
+    // keep frog above keys
+    frog.y = Math.min(frog.y, keysY - frog.r);
+  }
+
+  function drawKeyboard() {
+    textAlign(CENTER, CENTER);
+    textSize(16);
+    for (const k of keys) {
+      // key fill: active flash
+      const active = millis() < k.activeUntil;
+      stroke(60);
+      strokeWeight(2);
+      fill(active ? 230 : 250);
+      rect(k.x, k.y, k.w, k.h);
+
+      // key labels
+      noStroke();
+      fill(40);
+      text(k.note.name, k.x + k.w/2, k.y + k.h - 22);
+      fill(110);
+      text(k.note.key.toUpperCase(), k.x + k.w/2, k.y + k.h - 6);
+    }
+  }
+
+  function drawFrog() {
+    // body
+    noStroke();
+    fill(34, 180, 34);
+    ellipse(frog.x, frog.y, frog.r * 2);
+
+    // eyes
+    fill(255);
+    ellipse(frog.x - 7, frog.y - 10, 10, 10);
+    ellipse(frog.x + 7, frog.y - 10, 10, 10);
+    fill(0);
+    ellipse(frog.x - 7, frog.y - 10, 4, 4);
+    ellipse(frog.x + 7, frog.y - 10, 4, 4);
+  }
+
+  function physics() {
+    if (!frog.onGround) {
+      frog.vy += GRAVITY;
+      frog.x  += frog.vx;
+      frog.y  += frog.vy;
+
+      // floor (keyboard top)
+      if (frog.y + frog.r >= keysY) {
+        frog.y = keysY - frog.r;
+        frog.vy = 0;
+        frog.vx *= 0.4; // friction
+        frog.onGround = true;
+      }
+
+      // walls
+      if (frog.x - frog.r < 0) { frog.x = frog.r; frog.vx *= -0.5; }
+      if (frog.x + frog.r > width) { frog.x = width - frog.r; frog.vx *= -0.5; }
+    }
   }
 
   function draw() {
-    background(20);
+    background(22);
+    drawKeyboard();
+    physics();
+    drawFrog();
 
-    // Draw piano keys
-    fill(255);
-    for (let k of keys) {
-      rect(k.x, k.y, k.w, k.h);
-    }
-
-    // If frog on ground, wait & jump
-    if (frog.onGround && millis() > frog.timeToNextJump) {
-      frog.vx = random(-3, 3);
-      frog.vy = random(-8, -12);
-      frog.onGround = false;
-    }
-
-    // Gravity / movement if in air
-    if (!frog.onGround) {
-      frog.vy += gravity;
-      frog.x += frog.vx;
-      frog.y += frog.vy;
-
-      // If frog lands on piano
-      if (frog.y + frog.r >= keys[0].y) {
-        frog.y = keys[0].y - frog.r;
-        frog.vy = 0;
-        frog.vx = 0;
-        frog.onGround = true;
-        frog.timeToNextJump = millis() + 2000;
-      }
-
-      // Keep frog in horizontal bounds
-      if (frog.x < 0) frog.x = 0;
-      if (frog.x > width) frog.x = width;
-    }
-
-    // Draw frog
-    fill(0, 200, 0);
-    ellipse(frog.x, frog.y, frog.r * 2);
-
-    // (Optional) instructions in the corner
+    // HUD
     fill(200);
-    textSize(16);
+    noStroke();
     textAlign(CENTER);
-    text("Click keys to play notes", width / 2, 30);
+    textSize(14);
+    text("Click keys or press A S D F G", width/2, 24);
   }
 
-  // Mouse click: check if we clicked a key
+  function activateKey(i) {
+    const k = keys[i];
+    if (!k) return;
+
+    // Audio unlock & play
+    safeStartAudio();
+    osc.freq(k.note.freq);
+    osc.amp(0.6, ATTACK);
+    k.activeUntil = millis() + 150;
+
+    // Hop towards the key
+    const targetX = k.x + k.w/2;
+    const dx = targetX - frog.x;
+    frog.vx = constrain(dx / 12, -MAX_VX, MAX_VX);
+    frog.vy = HOP_VY - random(0, 2.5);
+    frog.onGround = false;
+  }
+
+  // Mouse / touch
   function mousePressed() {
-    for (let k of keys) {
-      if (
-        mouseX > k.x && mouseX < k.x + k.w &&
-        mouseY > k.y && mouseY < k.y + k.h
-      ) {
-        osc.freq(k.note);
-        osc.amp(0.5, 0.05);
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (mouseX > k.x && mouseX < k.x + k.w && mouseY > k.y && mouseY < k.y + k.h) {
+        activateKey(i);
+        break;
       }
     }
+    return false;
   }
+  function mouseReleased() { osc.amp(0, RELEASE); }
+  function touchStarted()  { return mousePressed(); }
+  function touchEnded()    { mouseReleased(); return false; }
 
-  // Stop sound on release
-  function mouseReleased() {
-    osc.amp(0, 0.5);
+  // Keyboard: A S D F G
+  function keyPressed() {
+    const ch = (key || '').toLowerCase();
+    const idx = NOTE_MAP.findIndex(n => n.key === ch);
+    if (idx >= 0) activateKey(idx);
+  }
+  function keyReleased() {
+    const ch = (key || '').toLowerCase();
+    if (NOTE_MAP.some(n => n.key === ch)) osc.amp(0, RELEASE);
   }
 </script>
