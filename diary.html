@@ -1,0 +1,42 @@
+---
+layout: default
+title: "Diary"
+permalink: /diary/
+---
+
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+
+<div class="diary-page">
+  <h1 class="diary-title">Diary Photos</h1>
+
+  <div class="diary-gallery">
+    {% assign photos = site.data.diary_photos %}
+    {% for p in photos %}
+    <figure class="polaroid" data-id="{{ p.id }}">
+      <img src="{{ p.src }}" alt="{{ p.caption }}">
+      <figcaption>{{ p.caption }}</figcaption>
+      <button class="like" type="button">❤ <span class="count">0</span></button>
+    </figure>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(()=> {
+  const figs = document.querySelectorAll('.polaroid');
+  figs.forEach(f => {
+    const id = f.dataset.id;
+    const btn = f.querySelector('.like');
+    const cnt = f.querySelector('.count');
+    const k = 'likes:'+id;
+    cnt.textContent = localStorage.getItem(k) || 0;
+    btn.addEventListener('click', () => {
+      const n = (+localStorage.getItem(k) || 0) + 1;
+      localStorage.setItem(k, n);
+      cnt.textContent = n;
+      btn.classList.add('liked');
+      setTimeout(()=>btn.classList.remove('liked'),150);
+    });
+  });
+})();
+</script>
