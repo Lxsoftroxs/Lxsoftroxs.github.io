@@ -6,10 +6,16 @@ permalink: /projects/tetris/
 
 <div id="tetris-wrap" style="display:flex;gap:16px;justify-content:center;align-items:flex-start;flex-wrap:wrap">
   <canvas id="tetris" style="background:#111;border:1px solid #333;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.5)"></canvas>
-  <div style="min-width:220px">
+  <div style="min-width:240px">
     <h2 style="margin:0 0 8px">Tetris</h2>
     <div id="score" style="font:600 18px/1 system-ui;padding:8px 12px;border:1px solid #333;border-radius:8px;background:#1a1a1a">Score: 0</div>
     <div id="level" style="margin-top:8px;font:600 16px/1 system-ui;padding:8px 12px;border:1px solid #333;border-radius:8px;background:#1a1a1a">Level: 1</div>
+
+    <div style="margin-top:8px">
+      <label style="font:600 14px system-ui">Name/Initials</label>
+      <input id="name" maxlength="16" placeholder="YOU"
+             style="width:100%;padding:6px 8px;background:#111;border:1px solid #333;border-radius:6px;color:#ddd;"/>
+    </div>
 
     <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div>
@@ -38,12 +44,14 @@ permalink: /projects/tetris/
 
 <script>
 (() => {
+  // --- API ---
+  const API_URL = "https://subscriber-api-lolroxs.vercel.app/api/tetris";
+
   // --- Config ---
   const W=10, H=20;
   const CLEAR_MS=320, CLEAR_BLINKS=3;
   const BASE_DROP=1000, MIN_DROP=90, SPEED_STEP=80;
   const COLORS={ I:"#00e5ff", O:"#ffd500", T:"#e91e63", S:"#43a047", Z:"#ef5350", J:"#3f51b5", L:"#fb8c00" };
-
   const SHAPES={
     I:{c:"I",m:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]]},
     O:{c:"O",m:[[1,1],[1,1]]},
@@ -55,12 +63,12 @@ permalink: /projects/tetris/
   };
   const BAG = () => Object.values(SHAPES).map(s=>s).sort(()=>Math.random()-0.5);
 
-  // --- Canvas sizing ---
+  // --- Canvas ---
   const cvs=document.getElementById("tetris"), ctx=cvs.getContext("2d");
   const ncv=document.getElementById("next"), nctx=ncv.getContext("2d");
   const hcv=document.getElementById("hold"), hctx=hcv.getContext("2d");
   function resize(){
-    const maxW=Math.min(document.getElementById("tetris-wrap").clientWidth-240, 520);
+    const maxW=Math.min(document.getElementById("tetris-wrap").clientWidth-260, 520);
     const cell=Math.max(16, Math.floor(Math.min(maxW, 520)/W));
     cvs.width=cell*W; cvs.height=cell*H; CELL=cell;
   }
@@ -70,15 +78,13 @@ permalink: /projects/tetris/
   let board=Array.from({length:H},()=>Array(W).fill(0));
   let piece=null, bag=BAG(), nextPiece=bag.pop();
   let holdPiece=null, canHold=true;
-  let score=0, level=1, dropTimer=0, last=0, paused=false, over=false, clearing=null;
-  let didSave=false;
-  const scoreEl=document.getElementById("score"), levelEl=document.getElementById("level"), lbEl=document.getElementById("lb");
+  let score=0, level=1, dropTimer=0, last=0, paused=false, over=false, clearing=null, didSave=false;
+  const scoreEl=document.getElementById("score"), levelEl=document.getElementById("level"),
+        lbEl=document.getElementById("lb"), nameInp=document.getElementById("name");
 
+  const clone = m => m.map(r=>r.slice());
   function levelFromScore(s){ return 1 + Math.floor(s/500); }
   function dropInterval(){ return Math.max(MIN_DROP, BASE_DROP - (level-1)*SPEED_STEP); }
-
-  // --- Helpers ---
-  const clone = m => m.map(r=>r.slice());
   function rotateCW(m){ const N=m.length, r=Array.from({length:N},()=>Array(N).fill(0)); for(let y=0;y<N;y++) for(let x=0;x<N;x++) r[x][N-1-y]=m[y][x]; return r; }
   function rotateCCW(m){ const N=m.length, r=Array.from({length:N},()=>Array(N).fill(0)); for(let y=0;y<N;y++) for(let x=0;x<N;x++) r[N-1-x][y]=m[y][x]; return r; }
   function collide(px,py,mat){
@@ -90,11 +96,11 @@ permalink: /projects/tetris/
   }
   function merge(px,py,mat,c){ for(let y=0;y<mat.length;y++) for(let x=0;x<mat[y].length;x++){ if(!mat[y][x]) continue; const X=px+x,Y=py+y; if(Y>=0) board[Y][X]=c; } }
 
-  // --- Pieces / queues ---
+  // --- Mini renders ---
   function drawMini(ctx, cv, shape){
     ctx.clearRect(0,0,cv.width,cv.height);
-    const m = shape ? SHAPES[shape.c].m : [[0]];
-    const size = Math.max(m.length, m[0].length);
+    if (!shape) { ctx.fillStyle="#111"; ctx.fillRect(0,0,cv.width,cv.height); return; }
+    const m = SHAPES[shape.c].m, size = Math.max(m.length, m[0].length);
     const cell = Math.floor(Math.min(cv.width, cv.height)/(size+1));
     const ox = Math.floor((cv.width - cell*m[0].length)/2);
     const oy = Math.floor((cv.height - cell*m.length)/2);
@@ -107,28 +113,23 @@ permalink: /projects/tetris/
   const drawNext=()=>drawMini(nctx,ncv,nextPiece);
   const drawHold=()=>drawMini(hctx,hcv,holdPiece);
 
+  // --- Piece flow ---
   function spawn(){
     piece = { x:3, y:-2, m:clone(nextPiece.m), c: nextPiece.c };
     if (bag.length===0) bag=BAG();
     nextPiece = bag.pop();
-    canHold=true;
-    drawNext(); drawHold();
-    if (collide(piece.x, piece.y, piece.m)) over=true;
+    canHold=true; drawNext(); drawHold();
+    if (collide(piece.x, piece.y, piece.m)) { over=true; }
   }
-
   function hold(){
     if (!canHold || !piece || clearing || over) return;
     const current = { c: piece.c, m: clone(piece.m) };
     if (!holdPiece){ holdPiece = current; spawn(); }
-    else {
-      const swap = holdPiece; holdPiece = current;
-      piece = { x:3, y:-2, m: clone(swap.m), c: swap.c };
-      if (collide(piece.x, piece.y, piece.m)) over=true;
-    }
+    else { const swap = holdPiece; holdPiece=current; piece={ x:3, y:-2, m:clone(swap.m), c:swap.c }; if (collide(piece.x,piece.y,piece.m)) over=true; }
     canHold=false; drawHold();
   }
 
-  // --- Drawing ---
+  // --- Draw ---
   function drawCell(x,y,c,ghost=false){
     const px=x*CELL, py=y*CELL;
     ctx.fillStyle=ghost? "#ffffff22" : COLORS[c];
@@ -171,7 +172,7 @@ permalink: /projects/tetris/
     if (over) overlay("GAME OVER  (R to restart)");
   }
 
-  // --- Scoring / clears ---
+  // --- Clears / scoring ---
   function checkClears(){
     const rows=[]; for(let y=0;y<H;y++) if(board[y].every(v=>v)) rows.push(y);
     if(rows.length){
@@ -186,21 +187,30 @@ permalink: /projects/tetris/
     scoreEl.textContent="Score: "+score; levelEl.textContent="Level: "+level;
   }
 
-  // --- Flow ---
-  function hardDrop(){
-    if (!piece || clearing) return;
-    let dist=0; while(!collide(piece.x, piece.y+1, piece.m)){ piece.y++; dist++; }
-    score += dist*2; lock();
-  }
-  function softDrop(){
-    if (!piece || clearing) return;
-    if (!collide(piece.x, piece.y+1, piece.m)){ piece.y++; score += 1; }
-    else lock();
-  }
+  // --- Lock / game over ---
   function lock(){
-    merge(piece.x, piece.y, piece.m, piece.c); piece=null;
+    let aboveTop=false;
+    for(let y=0;y<piece.m.length;y++) for(let x=0;x<piece.m[y].length;x++){
+      if(!piece.m[y][x]) continue;
+      const X=piece.x+x, Y=piece.y+y;
+      if (Y<0) { aboveTop=true; continue; }
+      board[Y][X]=piece.c;
+    }
+    piece=null;
+    if (aboveTop){ over=true; saveScoreOnce(); return; }
     if (!checkClears()) spawn();
     scoreEl.textContent="Score: "+score; levelEl.textContent="Level: "+level;
+  }
+
+  // --- Moves ---
+  function hardDrop(){ if(!piece||clearing) return; let d=0; while(!collide(piece.x,piece.y+1,piece.m)){ piece.y++; d++; } score+=d*2; lock(); }
+  function softDrop(){ if(!piece||clearing) return; if(!collide(piece.x,piece.y+1,piece.m)){ piece.y++; score+=1; } else lock(); }
+  function rot(dir){
+    if (!piece) return;
+    const m0=piece.m; let m= dir>0? rotateCW(m0) : rotateCCW(m0);
+    if (piece.c==="O") return;
+    const kicks=[[0,0],[-1,0],[1,0],[0,-1],[0,1]];
+    for (const [kx,ky] of kicks){ if(!collide(piece.x+kx,piece.y+ky,m)){ piece.x+=kx; piece.y+=ky; piece.m=m; return; } }
   }
 
   // --- Controls ---
@@ -219,56 +229,43 @@ permalink: /projects/tetris/
     else if (e.code==="KeyC" || e.code==="ShiftLeft" || e.code==="ShiftRight"){ hold(); }
   });
 
-  function rot(dir){
-    if (!piece) return;
-    const m0=piece.m; let m= dir>0? rotateCW(m0) : rotateCCW(m0);
-    if (piece.c==="O") return; // O doesn't rotate
-    const kicks=[[0,0],[-1,0],[1,0],[0,-1],[0,1]];
-    for (const [kx,ky] of kicks){ if(!collide(piece.x+kx,piece.y+ky,m)){ piece.x+=kx; piece.y+=ky; piece.m=m; return; } }
+  // --- Leaderboard (global) ---
+  function renderLeaderboard(list){
+    lbEl.innerHTML = (list||[]).slice(0,10).map((e,i)=>`<li>#${i+1} ${e.name} — ${e.score}</li>`).join("") || "<li>No scores yet</li>";
   }
-
-  // --- Leaderboard ---
-  function renderLeaderboard(){
-    const list = JSON.parse(localStorage.getItem("tetris_leaderboard")||"[]");
-    lbEl.innerHTML = list.slice(0,10).map((e,i)=>`<li>#${i+1} ${e.name||"YOU"} — ${e.score}</li>`).join("");
+  async function fetchLeaderboard(){
+    try { const r=await fetch(API_URL,{method:"GET",mode:"cors"}); const j=await r.json(); renderLeaderboard(j.leaderboard); }
+    catch {}
   }
-  function saveScoreOnce(){
-    if (didSave) return; didSave=true;
-    if (score<=0) return renderLeaderboard();
-    const def = localStorage.getItem("tetris_name") || "YOU";
-    const name = (prompt("Name/initials for leaderboard?", def) || def).slice(0,16);
+  async function submitScoreGlobal(){
+    const name = (nameInp?.value || localStorage.getItem("tetris_name") || "YOU").slice(0,16);
     localStorage.setItem("tetris_name", name);
-    const list = JSON.parse(localStorage.getItem("tetris_leaderboard")||"[]");
-    list.push({name, score, ts: Date.now()});
-    list.sort((a,b)=>b.score-a.score);
-    localStorage.setItem("tetris_leaderboard", JSON.stringify(list.slice(0,10)));
-    renderLeaderboard();
+    try {
+      const r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,score}),mode:"cors"});
+      const j=await r.json(); if (j.leaderboard) renderLeaderboard(j.leaderboard);
+    } catch {}
   }
+  function saveScoreOnce(){ if (didSave) return; didSave=true; if (score>0) submitScoreGlobal(); }
 
-  // --- Loop ---
+  // --- Loop / reset ---
   function step(t){
     const dt=t-last; last=t;
     if (!paused && !over){
-      if (clearing){
-        if (t - clearing.t0 >= CLEAR_MS*CLEAR_BLINKS){ applyClears(); spawn(); dropTimer=0; }
-      } else {
-        dropTimer += dt;
-        if (dropTimer >= dropInterval()){ if (!collide(piece.x,piece.y+1,piece.m)) piece.y++; else lock(); dropTimer=0; }
-      }
+      if (clearing){ if (t-clearing.t0 >= CLEAR_MS*CLEAR_BLINKS){ applyClears(); spawn(); dropTimer=0; } }
+      else { dropTimer+=dt; if (dropTimer >= dropInterval()){ if(!collide(piece.x,piece.y+1,piece.m)) piece.y++; else lock(); dropTimer=0; } }
     } else if (over){ saveScoreOnce(); }
     drawBoard(t);
     requestAnimationFrame(step);
   }
-
   function reset(){
     board=Array.from({length:H},()=>Array(W).fill(0));
     score=0; level=1; over=false; paused=false; clearing=null; didSave=false;
     bag=BAG(); nextPiece=bag.pop(); holdPiece=null; canHold=true;
     scoreEl.textContent="Score: 0"; levelEl.textContent="Level: 1";
-    renderLeaderboard(); spawn();
+    const saved = localStorage.getItem("tetris_name") || "YOU"; if (nameInp) nameInp.value = saved;
+    fetchLeaderboard(); spawn();
   }
 
-  // Start
-  renderLeaderboard(); reset(); requestAnimationFrame(step);
+  reset(); requestAnimationFrame(step);
 })();
 </script>
