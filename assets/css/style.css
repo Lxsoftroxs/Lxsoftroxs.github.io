@@ -121,11 +121,12 @@ a:hover {
   box-shadow: 0 0 0 4px #0e0e0e inset, 0 18px 40px rgba(0,0,0,.45);
 }
 .diary-title{
-  font-family: "Special Elite", ui-serif, Georgia, serif;
+  font-family: 'Courier New', Courier, monospace;
   letter-spacing:.4px; color:#e7e2d9; margin: 0 0 10px;
 }
 .diary-gallery{
   display:grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
   gap:20px; justify-items:center; margin-top: 12px;
 }
+
 
