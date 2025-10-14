@@ -1,0 +1,95 @@
+---
+layout: default
+title: Listening
+permalink: /listening/
+---
+
+<style>
+  /* light CSS that plays nice with your dark styles */
+  .listen-wrap { max-width: 820px; margin: 0 auto; padding: 1rem; }
+  .listen-row { display:flex; align-items:center; gap:1rem; padding:.75rem 0; border-bottom:1px solid #333; }
+  .listen-row img { width:64px; height:64px; object-fit:cover; border-radius:8px; }
+  .listen-meta { font-size:.9rem; opacity:.8; }
+  .badge { font-size:.8rem; padding:.15rem .5rem; border-radius:.5rem; border:1px solid #3a3a3a; }
+</style>
+
+<div class="listen-wrap">
+  <h1>🎧 Listening</h1>
+  <p class="listen-meta">Live from Last.fm &mdash; shows “Now Playing” if you’re currently listening.</p>
+
+  <div id="now-playing" class="listen-row" style="display:none;"></div>
+  <div id="recent-list"></div>
+</div>
+
+<script>
+  // 👉 EDIT THESE:
+  const LASTFM_USER = "Lxsoft";
+  const LASTFM_API_KEY = "01f055a2397afef55e6bef6e3d684510";
+
+  // Tweakable:
+  const LIMIT = 50;               // how many recent tracks to show
+  const REFRESH_MS = 60_000;      // refresh every 60s
+  const SIZE_INDEX = 3;           // 0..3 (bigger album image if available)
+
+  const $now = document.getElementById("now-playing");
+  const $list = document.getElementById("recent-list");
+
+  function imgOf(track) {
+    const images = track.image || [];
+    const pick = images[Math.min(SIZE_INDEX, images.length - 1)];
+    return (pick && pick["#text"]) || "https://lastfm.freetls.fastly.net/i/u/64s/2a96cbd8b46e442fc41c2b86b821562f.png";
+  }
+
+  function whenText(track) {
+    if (track["@attr"] && track["@attr"].nowplaying) return `<span class="badge">Now Playing</span>`;
+    const uts = track.date?.uts ? parseInt(track.date.uts, 10)*1000 : null;
+    if (!uts) return "";
+    const d = new Date(uts);
+    return d.toLocaleString();
+  }
+
+  function rowHTML(track) {
+    const artist = track.artist?.["#text"] || "";
+    const title  = track.name || "";
+    const url    = track.url || "#";
+    return `
+      <div class="listen-row">
+        <img alt="album art" src="${imgOf(track)}">
+        <div>
+          <div><a href="${url}" target="_blank" rel="noopener"><b>${title}</b></a></div>
+          <div class="listen-meta">${artist}</div>
+          <div class="listen-meta">${whenText(track)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadRecent() {
+    try {
+      const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${encodeURIComponent(LASTFM_USER)}&api_key=${LASTFM_API_KEY}&format=json&limit=${LIMIT}`;
+      const res = await fetch(url, { cache: "no-store" });
+      const data = await res.json();
+      const tracks = data?.recenttracks?.track || [];
+
+      // Now playing (if present, it’s always the first item with @attr.nowplaying === "true")
+      const np = tracks.find(t => t["@attr"] && t["@attr"].nowplaying);
+      if (np) {
+        $now.style.display = "";
+        $now.innerHTML = rowHTML(np);
+      } else {
+        $now.style.display = "none";
+      }
+
+      // Recent (exclude now playing duplicate)
+      const recent = tracks.filter(t => !(t["@attr"] && t["@attr"].nowplaying));
+      $list.innerHTML = recent.map(rowHTML).join("");
+    } catch (e) {
+      console.error(e);
+      $now.style.display = "";
+      $now.innerHTML = `<div>Couldn’t load Last.fm feed.</div>`;
+    }
+  }
+
+  loadRecent();
+  setInterval(loadRecent, REFRESH_MS);
+</script>
