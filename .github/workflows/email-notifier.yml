@@ -25,7 +25,7 @@ on:
         required: false
         type: string
       emails_csv:
-        description: "Comma-separated recipient list (overrides subscribers.json)."
+        description: "Comma-separated recipients (overrides subscribers.json)."
         required: false
         type: string
       dry_run:
@@ -33,10 +33,6 @@ on:
         required: false
         default: false
         type: boolean
-
-defaults:
-  run:
-    shell: bash
 
 jobs:
   notify:
@@ -49,12 +45,14 @@ jobs:
           fetch-depth: 0
 
       - name: Install msmtp and jq
+        shell: bash
         run: |
           set -e
           sudo apt-get update
           sudo apt-get install -y msmtp jq
 
       - name: Configure msmtp
+        shell: bash
         run: |
           set -e
           cat <<EOF > ~/.msmtprc
@@ -73,6 +71,7 @@ jobs:
 
       - name: Build recipient list
         id: recipients
+        shell: bash
         env:
           INPUT_EMAILS: ${{ github.event.inputs.emails_csv }}
         run: |
@@ -91,6 +90,7 @@ jobs:
 
       - name: Detect target post (push vs manual)
         id: detect
+        shell: bash
         env:
           BEFORE: ${{ github.event.before }}
           SHA: ${{ github.sha }}
@@ -103,25 +103,17 @@ jobs:
           set -e
           echo "::group::Detect target post"
 
-          # --- helpers ---
-          strip_inline_comment() { sed 's/[[:space:]]*#.*$//' ; }
+          # --- helpers (no bashisms beyond plain bash) ---
+          strip_inline_comment() { sed 's/[[:space:]]*#.*$//'; }
           strip_quotes_trim() { tr -d '"'\'' | awk '{$1=$1;print}'; }
-          ensure_leading_slash() {
-            local v="$1"
-            if [ -z "$v" ]; then printf ""; return; fi
-            case "$v" in
-              /*) printf "%s" "$v" ;;
-              *)  printf "/%s" "$v" ;;
-            esac
+          trim_quotes_once() {
+            v="$1"; v="${v%\"}"; v="${v#\"}"; v="${v%\'}"; v="${v#\'}"; printf '%s' "$v";
           }
-          trim_quotes() {
-            local v="$1"
-            v="${v%\"}"; v="${v#\"}"
-            v="${v%\'}"; v="${v#\'}"
-            printf '%s' "$v"
+          ensure_leading_slash() {
+            v="$1"; if [ -z "$v" ]; then printf ""; return; fi
+            case "$v" in /*) printf "%s" "$v";; *) printf "/%s" "$v";; esac
           }
 
-          # Inputs / defaults
           SUBJECT_PREFIX="${INPUT_SUBJECT_PREFIX:-New Post}"
           echo "SUBJECT_PREFIX=$SUBJECT_PREFIX" >> "$GITHUB_ENV"
           echo "CUSTOM_MESSAGE=${INPUT_CUSTOM_MESSAGE:-}" >> "$GITHUB_ENV"
@@ -136,42 +128,38 @@ jobs:
             CONFIG_PERMALINK=$(sed -n 's/^permalink:[[:space:]]*//p' _config.yml | head -n1 | strip_inline_comment | strip_quotes_trim)
           fi
 
-          # Fallback url if empty; normalize baseurl leading slash
+          # Fallback url if empty; normalize baseurl leading slash; ensure scheme
           [ -n "$SITE_URL" ] || SITE_URL="https://lxsoftroxs.github.io"
-          # If someone wrote //user.github.io, add scheme
           if echo "$SITE_URL" | grep -qE '^//'; then SITE_URL="https:${SITE_URL}"; fi
-          # Ensure SITE_URL has scheme
           if ! echo "$SITE_URL" | grep -qE '^https?://'; then SITE_URL="https://$SITE_URL"; fi
-          # Normalize baseurl to start with / (or empty)
-          if [ -n "$BASEURL" ]; then BASEURL="$(ensure_leading_slash "$BASEURL")"; fi
+          [ -n "$BASEURL" ] && BASEURL="$(ensure_leading_slash "$BASEURL")"
 
-          resolve_title_and_url() {
-            local path="$1"
-            local fname year month day slug title fm_perm permalink
+          # --- function to derive title and URL for a post ---
+          resolve_title_and_url_file() {
+            path="$1"
+            fname="${path##*/}"; fname="${fname%.md}"
+            year="${fname%%-*}"; rest="${fname#*-}"
+            month="${rest%%-*}"; rest="${rest#*-}"
+            day="${rest%%-*}"; slug="${rest#*-}"
 
-            fname=$(basename "$path" .md)
-            year=$(echo "$fname" | cut -d'-' -f1)
-            month=$(echo "$fname" | cut -d'-' -f2)
-            day=$(echo "$fname" | cut -d'-' -f3)
-            slug=$(echo "$fname" | cut -d'-' -f4-)
-
-            local title_line fm_perm_line title_raw fm_perm_raw
+            # front-matter lines (do not fail if missing)
             title_line=$(grep -m1 '^title:' "$path" || true)
             fm_perm_line=$(grep -m1 '^permalink:' "$path" || true)
 
-            title_raw=$(echo "${title_line#title: }" | strip_inline_comment | strip_quotes_trim)
-            fm_perm_raw=$(echo "${fm_perm_line#permalink: }" | strip_inline_comment | strip_quotes_trim)
+            title_raw="$(printf '%s' "${title_line#title: }" | strip_inline_comment | strip_quotes_trim)"
+            fm_perm_raw="$(printf '%s' "${fm_perm_line#permalink: }" | strip_inline_comment | strip_quotes_trim)"
 
-            title=$(trim_quotes "${title_raw:-$fname}")
-            fm_perm=$(trim_quotes "${fm_perm_raw:-}")
+            title="$(trim_quotes_once "${title_raw:-$fname}")"
+            fm_perm="$(trim_quotes_once "${fm_perm_raw:-}")"
 
+            # Build permalink preference: custom input -> front-matter -> config -> default
             if [ -n "${INPUT_CUSTOM_URL:-}" ]; then
               permalink="$INPUT_CUSTOM_URL"
             elif [ -n "$fm_perm" ]; then
               permalink="$fm_perm"
               case "$permalink" in
-                http*://*) ;; # absolute ok
-                /*) ;;        # site-root ok
+                http*://*) : ;;
+                /*) : ;;
                 *) permalink="/$permalink" ;;
               esac
             else
@@ -189,61 +177,55 @@ jobs:
               esac
             fi
 
-            # Build final URL safely (no dup slashes; include scheme)
             if echo "$permalink" | grep -qE '^https?://'; then
-              echo "POST_URL=$permalink" >> "$GITHUB_ENV"
+              POST_URL="$permalink"
             else
-              # ensure permalink starts with /
-              case "$permalink" in
-                /*) ;; *) permalink="/$permalink" ;;
-              esac
-              local full="${SITE_URL%/}${BASEURL%/}${permalink}"
-              echo "POST_URL=$full" >> "$GITHUB_ENV"
+              case "$permalink" in /*) : ;; *) permalink="/$permalink" ;; esac
+              POST_URL="${SITE_URL%/}${BASEURL%/}${permalink}"
             fi
+
             echo "POST_TITLE=$title" >> "$GITHUB_ENV"
+            echo "POST_URL=$POST_URL" >> "$GITHUB_ENV"
           }
 
+          # Return the latest post path by commit history; fallback to mtime
           pick_latest_post() {
-            # Most recent by commit history touching _posts; fallback mtime
-            mapfile -t touched < <( git log --pretty=format: --name-only -- _posts/*.md | awk '/^_posts\/.*\.md$/' )
-            if [ "${#touched[@]}" -gt 0 ]; then
-              printf '%s\n' "${touched[0]}"
-            else
-              mapfile -t by_time < <( ls -t _posts/*.md 2>/dev/null || true )
-              [ "${#by_time[@]}" -gt 0 ] && printf '%s\n' "${by_time[0]}"
+            latest=""
+            # This prints filenames line-by-line; we take the first match
+            latest=$(git log --pretty=format: --name-only -- _posts/*.md | awk '/^_posts\/.*\.md$/ {print; exit}')
+            if [ -z "$latest" ]; then
+              latest=$(ls -t _posts/*.md 2>/dev/null | sed -n '1p')
             fi
+            printf '%s' "$latest"
           }
 
           if [ "${EVENT_NAME:-}" = "workflow_dispatch" ]; then
             if [ -n "${INPUT_POST_PATH:-}" ]; then
-              [ -f "$INPUT_POST_PATH" ] || { echo "Error: post_path '$INPUT_POST_PATH' not found"; exit 1; }
+              if [ ! -f "$INPUT_POST_PATH" ]; then
+                echo "Error: post_path '$INPUT_POST_PATH' not found"; exit 1
+              fi
               TARGET="$INPUT_POST_PATH"
             else
               TARGET="$(pick_latest_post)"
-              [ -n "$TARGET" ] || { echo "Error: No posts in _posts/"; exit 1; }
+              if [ -z "$TARGET" ]; then
+                echo "Error: No posts in _posts/"; exit 1
+              fi
             fi
             echo "mode=manual" >> "$GITHUB_OUTPUT"
             echo "Target: $TARGET"
-            resolve_title_and_url "$TARGET"
+            resolve_title_and_url_file "$TARGET"
             echo "skip=false" >> "$GITHUB_OUTPUT"
             echo "::endgroup::"
             exit 0
           fi
 
           # PUSH mode: only when a file was ADDED in this push
-          is_valid_before=false
-          if [ -n "${BEFORE:-}" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            is_valid_before=true
-          fi
-
           NEW_POST=""
-          if [ "$is_valid_before" = true ]; then
-            mapfile -t added_range < <( git diff --name-only --diff-filter=A "$BEFORE" "$SHA" -- '_posts/*.md' || true )
-            if [ "${#added_range[@]}" -gt 0 ]; then NEW_POST="${added_range[0]}"; fi
+          if [ -n "${BEFORE:-}" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            NEW_POST="$(git diff --name-only --diff-filter=A "$BEFORE" "$SHA" -- '_posts/*.md' | sed -n '1p' || true)"
           fi
           if [ -z "$NEW_POST" ]; then
-            mapfile -t added_commit < <( git diff-tree --no-commit-id --name-only --diff-filter=A -r "$SHA" -- '_posts/*.md' || true )
-            if [ "${#added_commit[@]}" -gt 0 ]; then NEW_POST="${added_commit[0]}"; fi
+            NEW_POST="$(git diff-tree --no-commit-id --name-only --diff-filter=A -r "$SHA" -- '_posts/*.md' | sed -n '1p' || true)"
           fi
 
           if [ -z "$NEW_POST" ]; then
@@ -256,11 +238,12 @@ jobs:
 
           echo "mode=push" >> "$GITHUB_OUTPUT"
           echo "Target (added): $NEW_POST"
-          resolve_title_and_url "$NEW_POST"
+          resolve_title_and_url_file "$NEW_POST"
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "::endgroup::"
 
       - name: Summary (what would be sent)
+        shell: bash
         run: |
           set -e
           echo "Recipient source: ${{ steps.recipients.outputs.source }}"
@@ -273,6 +256,7 @@ jobs:
 
       - name: Send notification email
         if: steps.detect.outputs.skip == 'false' && env.EMAIL_LIST != '' && github.event.inputs.dry_run != 'true'
+        shell: bash
         env:
           SUBJECT_PREFIX: ${{ env.SUBJECT_PREFIX }}
           POST_TITLE: ${{ env.POST_TITLE }}
