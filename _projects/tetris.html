@@ -84,7 +84,10 @@ permalink: /projects/tetris/
 
   const clone = m => m.map(r=>r.slice());
   function levelFromScore(s){ return 1 + Math.floor(s/500); }
-  function dropInterval(){ return Math.max(MIN_DROP, BASE_DROP - (level-1)*SPEED_STEP); }
+  function dropInterval() {
+    const decay = 0.88; // smaller = slower acceleration per level
+    return Math.max(MIN_DROP, BASE_DROP * Math.pow(decay, level - 1));
+  }
   function rotateCW(m){ const N=m.length, r=Array.from({length:N},()=>Array(N).fill(0)); for(let y=0;y<N;y++) for(let x=0;x<N;x++) r[x][N-1-y]=m[y][x]; return r; }
   function rotateCCW(m){ const N=m.length, r=Array.from({length:N},()=>Array(N).fill(0)); for(let y=0;y<N;y++) for(let x=0;x<N;x++) r[N-1-x][y]=m[y][x]; return r; }
   function collide(px,py,mat){
