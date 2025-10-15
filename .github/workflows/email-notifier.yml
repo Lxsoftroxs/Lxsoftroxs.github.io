@@ -6,14 +6,41 @@ on:
       - main
     paths:
       - "_posts/**"
+  workflow_dispatch:
+    inputs:
+      post_path:
+        description: "Path to a post to notify about (e.g., _posts/2025-10-14-my-post.md). If empty, latest post is used."
+        required: false
+        type: string
+      custom_url:
+        description: "Override URL (optional). If provided, this will be used instead of deriving from filename."
+        required: false
+        type: string
+      subject_prefix:
+        description: "Subject prefix (e.g., 'New Post' or 'Update')."
+        required: false
+        default: "New Post"
+        type: string
+      custom_message:
+        description: "Extra message to include in the email body (optional)."
+        required: false
+        type: string
+      emails_csv:
+        description: "Comma-separated list of emails (optional override of subscribers.json)."
+        required: false
+        type: string
+      dry_run:
+        description: "If true, compute everything but do not send email."
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   notify:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Full history so we can diff against github.event.before reliably
-      - name: Checkout repository
+      - name: Checkout repository (full history for diffs)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -39,25 +66,104 @@ jobs:
           EOF
           chmod 600 ~/.msmtprc
 
-      - name: Fetch subscribers
+      - name: Build recipient list
+        id: recipients
+        env:
+          INPUT_EMAILS: ${{ github.event.inputs.emails_csv }}
         run: |
-          if [ -f subscribers.json ]; then
+          # If manual override provided, use it; else load from subscribers.json if present.
+          if [ -n "$INPUT_EMAILS" ]; then
+            echo "EMAIL_LIST=$INPUT_EMAILS" >> "$GITHUB_ENV"
+            echo "source=override" >> "$GITHUB_OUTPUT"
+          elif [ -f subscribers.json ]; then
             emails=$(jq -r '.[]' subscribers.json | paste -sd, -)
-            echo "EMAIL_LIST=$emails" >> $GITHUB_ENV
+            echo "EMAIL_LIST=$emails" >> "$GITHUB_ENV"
+            echo "source=subscribers.json" >> "$GITHUB_OUTPUT"
           else
-            echo "EMAIL_LIST=" >> $GITHUB_ENV
+            echo "EMAIL_LIST=" >> "$GITHUB_ENV"
+            echo "source=none" >> "$GITHUB_OUTPUT"
           fi
 
-      # Robust detection of newly ADDED post files in this push
-      - name: Detect new post
+      - name: Detect target post (push vs manual)
         id: detect
         env:
           BEFORE: ${{ github.event.before }}
           SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_POST_PATH: ${{ github.event.inputs.post_path }}
+          INPUT_CUSTOM_URL: ${{ github.event.inputs.custom_url }}
+          INPUT_SUBJECT_PREFIX: ${{ github.event.inputs.subject_prefix }}
+          INPUT_CUSTOM_MESSAGE: ${{ github.event.inputs.custom_message }}
         run: |
           set -e
 
-          # Helper: is BEFORE a valid reachable commit?
+          # Defaults
+          SUBJECT_PREFIX="${INPUT_SUBJECT_PREFIX:-New Post}"
+          echo "SUBJECT_PREFIX=$SUBJECT_PREFIX" >> "$GITHUB_ENV"
+          echo "CUSTOM_MESSAGE=$INPUT_CUSTOM_MESSAGE" >> "$GITHUB_ENV"
+
+          pick_latest_post() {
+            # Prefer git order (most recently committed), fallback to filesystem time
+            latest=$(git ls-files _posts/*.md 2>/dev/null | xargs -r -I{} git log -1 --format='%ct %H %n{}' -- {} \
+              | paste - - - \
+              | sort -nrk1 \
+              | awk '{print $3; exit}')
+            if [ -z "$latest" ]; then
+              latest=$(ls -t _posts/*.md 2>/dev/null | head -n1 || true)
+            fi
+            echo "$latest"
+          }
+
+          resolve_title_and_url() {
+            local path="$1"
+            # Title from YAML front matter (strip optional quotes)
+            local title
+            title=$(grep -m1 '^title:' "$path" | sed 's/^title:[[:space:]]*["'\''"]\?\(.*\)["'\''"]\?$/\1/')
+            if [ -z "$title" ]; then
+              title=$(basename "$path" .md)
+            fi
+
+            local url
+            if [ -n "$INPUT_CUSTOM_URL" ]; then
+              url="$INPUT_CUSTOM_URL"
+            else
+              # Build URL: _posts/YYYY-MM-DD-slug.md → /YYYY/MM/DD/slug.html
+              local fname year month day slug
+              fname=$(basename "$path" .md)
+              year=$(echo "$fname" | cut -d'-' -f1)
+              month=$(echo "$fname" | cut -d'-' -f2)
+              day=$(echo "$fname" | cut -d'-' -f3)
+              slug=$(echo "$fname" | cut -d'-' -f4-)
+              url="https://lxsoftroxs.github.io/$year/$month/$day/$slug.html"
+            fi
+
+            echo "POST_TITLE=$title" >> "$GITHUB_ENV"
+            echo "POST_URL=$url" >> "$GITHUB_ENV"
+          }
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            # MANUAL MODE: use input path if provided, else latest post
+            if [ -n "$INPUT_POST_PATH" ]; then
+              if [ ! -f "$INPUT_POST_PATH" ]; then
+                echo "Error: Provided post_path '$INPUT_POST_PATH' does not exist." >&2
+                exit 1
+              fi
+              TARGET="$INPUT_POST_PATH"
+            else
+              TARGET="$(pick_latest_post)"
+              if [ -z "$TARGET" ]; then
+                echo "Error: No posts found in _posts/." >&2
+                exit 1
+              fi
+            fi
+            echo "mode=manual" >> "$GITHUB_OUTPUT"
+            echo "TARGET=$TARGET"
+            resolve_title_and_url "$TARGET"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # PUSH MODE: only notify if a post was ADDED in this push
           is_valid_before=false
           if [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             is_valid_before=true
@@ -65,46 +171,51 @@ jobs:
 
           NEW_POST=""
           if [ "$is_valid_before" = true ]; then
-            # Case A: We have a valid 'before' -> diff the push range
             NEW_POST=$(git diff --name-only --diff-filter=A "$BEFORE" "$SHA" -- '_posts/*.md' | head -n1)
           fi
-
           if [ -z "$NEW_POST" ]; then
-            # Case B: Fallback – detect files added in THIS commit (covers initial commits, force-pushes, or shallow anomalies)
+            # Fallback: files added in this commit (covers first commit / force-push)
             NEW_POST=$(git diff-tree --no-commit-id --name-only --diff-filter=A -r "$SHA" -- '_posts/*.md' | head -n1)
           fi
 
           if [ -z "$NEW_POST" ]; then
-            echo "No new post added – skipping notification."
+            echo "No new post added in this push – skipping notification."
+            echo "mode=push" >> "$GITHUB_OUTPUT"
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Extract title from YAML front matter (strip optional quotes)
-          TITLE=$(grep -m1 '^title:' "$NEW_POST" | sed 's/^title:[[:space:]]*["'\'']\?\(.*\)["'\'']\?$/\1/')
-          if [ -z "$TITLE" ]; then
-            # Last resort: use filename slug if no title found
-            TITLE=$(basename "$NEW_POST" .md)
-          fi
+          echo "mode=push" >> "$GITHUB_OUTPUT"
+          echo "TARGET=$NEW_POST"
+          resolve_title_and_url "$NEW_POST"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
-          # Build URL: _posts/YYYY-MM-DD-slug.md → /YYYY/MM/DD/slug.html
-          FILENAME=$(basename "$NEW_POST" .md)
-          YEAR=$(echo "$FILENAME" | cut -d'-' -f1)
-          MONTH=$(echo "$FILENAME" | cut -d'-' -f2)
-          DAY=$(echo "$FILENAME" | cut -d'-' -f3)
-          SLUG=$(echo "$FILENAME" | cut -d'-' -f4-)
-          URL="https://lxsoftroxs.github.io/$YEAR/$MONTH/$DAY/$SLUG.html"
-
-          echo "POST_TITLE=$TITLE" >> "$GITHUB_ENV"
-          echo "POST_URL=$URL"     >> "$GITHUB_ENV"
-          echo "skip=false"        >> "$GITHUB_OUTPUT"
+      - name: Summary (what would be sent)
+        run: |
+          echo "Recipient source: ${{ steps.recipients.outputs.source }}"
+          echo "Email list length: $( [ -n "${EMAIL_LIST}" ] && echo "${EMAIL_LIST}" | awk -F',' '{print NF}' || echo 0 )"
+          echo "Subject prefix: ${SUBJECT_PREFIX}"
+          echo "Post title: ${POST_TITLE}"
+          echo "Post URL: ${POST_URL}"
+          echo "Mode: ${{ steps.detect.outputs.mode }}"
+          echo "Dry run: ${{ github.event.inputs.dry_run }}"
 
       - name: Send notification email
-        if: steps.detect.outputs.skip == 'false' && env.EMAIL_LIST != ''
+        if: steps.detect.outputs.skip == 'false' && env.EMAIL_LIST != '' && github.event.inputs.dry_run != 'true'
+        env:
+          SUBJECT_PREFIX: ${{ env.SUBJECT_PREFIX }}
+          POST_TITLE: ${{ env.POST_TITLE }}
+          POST_URL: ${{ env.POST_URL }}
+          CUSTOM_MESSAGE: ${{ env.CUSTOM_MESSAGE }}
         run: |
-          cat <<EOF | msmtp -a default "${{ env.EMAIL_LIST }}"
-          Subject: New Post: ${POST_TITLE}
-
-          Check out the new post: "${POST_TITLE}"
-          ${POST_URL}
-          EOF
+          SUBJECT="${SUBJECT_PREFIX}: ${POST_TITLE}"
+          {
+            echo "Subject: ${SUBJECT}"
+            echo
+            echo "Check out the post: \"${POST_TITLE}\""
+            echo "${POST_URL}"
+            if [ -n "${CUSTOM_MESSAGE}" ]; then
+              echo
+              echo "${CUSTOM_MESSAGE}"
+            fi
+          } | msmtp -a default "${EMAIL_LIST}"
