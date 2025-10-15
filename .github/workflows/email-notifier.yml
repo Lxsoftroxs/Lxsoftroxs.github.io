@@ -34,6 +34,10 @@ on:
         default: false
         type: boolean
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -46,11 +50,13 @@ jobs:
 
       - name: Install msmtp and jq
         run: |
+          set -eo pipefail
           sudo apt-get update
           sudo apt-get install -y msmtp jq
 
       - name: Configure msmtp
         run: |
+          set -eo pipefail
           cat <<EOF > ~/.msmtprc
           account default
           host smtp.gmail.com
@@ -70,7 +76,8 @@ jobs:
         env:
           INPUT_EMAILS: ${{ github.event.inputs.emails_csv }}
         run: |
-          if [ -n "$INPUT_EMAILS" ]; then
+          set -eo pipefail
+          if [ -n "${INPUT_EMAILS:-}" ]; then
             echo "EMAIL_LIST=$INPUT_EMAILS" >> "$GITHUB_ENV"
             echo "source=override" >> "$GITHUB_OUTPUT"
           elif [ -f subscribers.json ]; then
@@ -93,8 +100,9 @@ jobs:
           INPUT_SUBJECT_PREFIX: ${{ github.event.inputs.subject_prefix }}
           INPUT_CUSTOM_MESSAGE: ${{ github.event.inputs.custom_message }}
         run: |
-          set -euo pipefail
+          set -eo pipefail
 
+          # Defaults
           SUBJECT_PREFIX="${INPUT_SUBJECT_PREFIX:-New Post}"
           echo "SUBJECT_PREFIX=$SUBJECT_PREFIX" >> "$GITHUB_ENV"
           echo "CUSTOM_MESSAGE=${INPUT_CUSTOM_MESSAGE:-}" >> "$GITHUB_ENV"
@@ -108,25 +116,23 @@ jobs:
             BASEURL=$(awk -F': *' '/^baseurl:/{print $2}' _config.yml | tr -d '"'\''')
             CONFIG_PERMALINK=$(awk -F': *' '/^permalink:/{print $2}' _config.yml | tr -d '"'\''')
           fi
-          # Fallbacks for GitHub Pages default domain if no url set
+          # fallback for GH Pages default
           if [ -z "$SITE_URL" ]; then
             SITE_URL="https://lxsoftroxs.github.io"
           fi
-          # Ensure baseurl starts with slash or empty
+          # ensure baseurl begins with slash (or empty)
           if [ -n "$BASEURL" ] && [ "${BASEURL#'/'}" = "$BASEURL" ]; then
             BASEURL="/$BASEURL"
           fi
 
           trim_quotes(){
             val="$1"
-            # strip ONE pair of leading/trailing single OR double quotes
+            # strip one pair of leading/trailing " or '
             val="${val%\"}"; val="${val#\"}"
             val="${val%\'}"; val="${val#\'}"
             printf '%s' "$val"
           }
 
-          # Resolve permalink for a given post path:
-          # Priority: front-matter "permalink:" -> known _config.yml patterns -> default (/Y/M/D/title.html)
           resolve_title_and_url(){
             local path="$1"
             local fname year month day slug title permalink fm_perm
@@ -137,7 +143,6 @@ jobs:
             day=$(echo "$fname" | cut -d'-' -f3)
             slug=$(echo "$fname" | cut -d'-' -f4-)
 
-            # YAML front matter: title & permalink
             title=$(grep -m1 '^title:' "$path" | sed 's/^title:[[:space:]]*//')
             title=$(trim_quotes "${title:-$fname}")
 
@@ -147,18 +152,13 @@ jobs:
             if [ -n "${INPUT_CUSTOM_URL:-}" ]; then
               permalink="$INPUT_CUSTOM_URL"
             elif [ -n "$fm_perm" ]; then
-              # Use front-matter permalink verbatim
               permalink="$fm_perm"
-              # ensure leading slash
               case "$permalink" in
-                http*://*) ;; # absolute
-                /*) ;;        # ok
+                http*://*) ;; # absolute OK
+                /*) ;;        # leading slash OK
                 *) permalink="/$permalink" ;;
               esac
-              # final URL:
-              :
             else
-              # Try to honor a few common config permalink patterns
               case "$CONFIG_PERMALINK" in
                 "/:year/:month/:day/:title/" )
                   permalink="/$year/$month/$day/$slug/";;
@@ -169,16 +169,13 @@ jobs:
                 "/:title.html" )
                   permalink="/$slug.html";;
                 * )
-                  # Default Jekyll posts permalink:
                   permalink="/$year/$month/$day/$slug.html";;
               esac
             fi
 
-            # If permalink is absolute URL already, use as-is; else prefix site url + baseurl
             if echo "$permalink" | grep -qE '^https?://'; then
               echo "POST_URL=$permalink" >> "$GITHUB_ENV"
             else
-              # Collapse double slashes cautiously
               full="$SITE_URL${BASEURL%/}$permalink"
               echo "POST_URL=$full" >> "$GITHUB_ENV"
             fi
@@ -193,7 +190,7 @@ jobs:
               | awk '{print $3; exit}'
           }
 
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+          if [ "${EVENT_NAME:-}" = "workflow_dispatch" ]; then
             if [ -n "${INPUT_POST_PATH:-}" ]; then
               [ -f "$INPUT_POST_PATH" ] || { echo "Error: post_path '$INPUT_POST_PATH' not found"; exit 1; }
               TARGET="$INPUT_POST_PATH"
@@ -234,6 +231,7 @@ jobs:
 
       - name: Summary (what would be sent)
         run: |
+          set -eo pipefail
           echo "Recipient source: ${{ steps.recipients.outputs.source }}"
           echo "Email count: $( [ -n "${EMAIL_LIST}" ] && echo "${EMAIL_LIST}" | awk -F',' '{print NF}' || echo 0 )"
           echo "Subject prefix: ${SUBJECT_PREFIX}"
@@ -250,6 +248,7 @@ jobs:
           POST_URL: ${{ env.POST_URL }}
           CUSTOM_MESSAGE: ${{ env.CUSTOM_MESSAGE }}
         run: |
+          set -eo pipefail
           SUBJECT="${SUBJECT_PREFIX}: ${POST_TITLE}"
           {
             echo "Subject: ${SUBJECT}"
