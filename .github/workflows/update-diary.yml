@@ -3,8 +3,11 @@ name: Update Diary Photos
 on:
   push:
     paths:
-      - 'assets/diary/**'       # only run if photos change
+      - 'assets/diary/**'
       - '.github/scripts/update_diary.py'
+
+permissions:
+  contents: write   # ✅ allows pushing changes back to the repo
 
 jobs:
   build:
@@ -14,7 +17,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false   # we’ll use our own token to push
+          token: ${{ secrets.GITHUB_TOKEN }}   # ✅ ensures repo push access
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,3 +37,6 @@ jobs:
           commit_message: "auto: update diary photos"
           commit_user_name: github-actions
           commit_user_email: actions@github.com
+          push_options: '--force'
+          # ✅ use built-in token to push
+          token: ${{ secrets.GITHUB_TOKEN }}
