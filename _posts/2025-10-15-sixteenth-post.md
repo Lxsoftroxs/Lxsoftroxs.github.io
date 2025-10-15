@@ -7,31 +7,32 @@ date: 2025-10-15
 May my soul never know this greif again. 
 
 
-May there come a day where I know freedom from the hell I created for myself. I hate myself 
-How how how how, how did I do this. Fuck me. 
-I hate you for being you, for being the person I need most. I hate you because I let you down. This endless ocean of my grief, I drown because I refuse to swim.
-Take me, I’ve seen all I needed to see. Return me to the moon. This life wasn’t for me. 
-May I never forget.
-Cross my heart, hope to die, stick a needle in my eye, I promise to never forget lest damocles sword fall.
+May there come a day where I know freedom from the hell I created for myself. I hate myself                                                                                
+How how how how, how did I do this. Fuck me.                                                                               
+I hate you for being you, for being the person I need most. I hate you because I let you down. This endless ocean of my grief, I drown because I refuse to swim                                                                              
+Take me, I’ve seen all I needed to see. Return me to the moon. This life wasn’t for me.                                                                                                                                                             
+May I never forget.                                                                                                                                                      
+Cross my heart, hope to die, stick a needle in my eye, I promise to never forget lest damocles sword fall.                                                                                                                                                
 The word, all I lived for. The one thing I was certain about, the person who found it I’d love forever. Thats now my burden to bear. Why do I live now? Rescue me, I can’t swim.
 
-Are you a dreamer too? I call your name across the vast expanse to only returning echos. 
-There is no real happiness, only dreams. 
-I held that dream, snow burning.
-She laughed, lights silent.
-I lay staring at the empty ceiling just waiting for the day to pass.
+Are you a dreamer too? I call your name across the vast expanse to only returning echos.                                                                                                                                                             
+There is no real happiness, only dreams.                                                                               
+I held that dream, snow burning.                                                                              
+She laughed, lights silent.                                                                              
+I lay staring at the empty ceiling just waiting for the day to pass.                                                                              
 Today, I no longer dream. 
 
 
 May I be reborn anew, the same person, but so much less. A husk. The chaos era never ends. 
-Did the good not outweigh the bad? Will God know my wrongs from my eyes? A guarantee for Him to suffer forever. May God feel the hell he created through me. For even in my finite existence I have infinity inside me. 
-I believed you had my infinity. 
+
+Did the good not outweigh the bad? Will God know my wrongs from my eyes? A guarantee for Him to suffer forever. May God feel the hell he created through me. For even in my finite existence I have infinity inside me.                                                                               
+I believed you had my infinity.                                                                               
 May my tears stain these pages. A record, an endless record, that you can access. I showed you every corner of my heart. You never hurt any of it. Yet you leave. A womb of warmth that we are forced to leave. A still born knows no love that exists outside. May I never know the warmth of the womb again. 
 
 The grief will wash me clean. The woes I carried roll off of me. I pray my words will bring you back, Maybe maybe maybe there exists a way back. We outgrow the womb that held us. 
 
 
-Okie I’m done with the weird womb metaphor, I just liked the imagery of a complete encompassing warmth. Thats what love feels like to me, without it I shiver and the world reaches out to hurt me. 
+Okie I’m done with the weird womb metaphor, I just liked the imagery of a complete encompassing warmth. Thats what love feels like to me, without it I shiver and the world reaches out to hurt me.                                                                               
 Man you were great. Once this is on the blog you’ll probably read it. But what happens if I show someone else this blog in the future? When I gave you access, I expected you to hate me. Few people can see the love you give to others and see it as a love they can give to you. Thats what plagues me so badly. There really won’t be and can’t be a moment that special to me anymore. Like a comet it really only burns once. I know I’ve felt this way about others before, but Jill my life is the cycle of an artist, with each new piece and experience I paint I get better, sadder, stronger, weaker, more flawed, yet more complete. And so at this moment I know that this is the most I’ve ever loved someone else. When comparing sizes of infinity, theres an infinity found in the tip of my pen but that doesn’t compare to the infinity held within my mind. As I love you everything else approaches zero. May my emotions stand as pillar that I will never stand upon again. 
 
 I’ve known so many fucking people so manyyyyyy I’ve moved like 9 times I’ve lost count, but man I’ve seen every person. Archetypes of people do exist, thats what I learned, there are others like you. I dont know how to put this into words though. I’ve dated other people like you even. Yet you you are me. Others will try to understand me, but you you can see me because you can see yourself. You know why I do the things I do, so it hurts so much more that you don’t want us. There is no misunderstanding or miscommunication, you dont want me. And I know you love me and you care about me but there is not a hope of our future you will commit to seeing. Its taken my partners months and months to begin to see me, some never really did, some came close. I suspect that seeing me is possible, but like a horror beyond human comprehension it breaks your mind. Thats what infinity is I guess, something the human mind was never supposed to contain. Hah yeah I like that. HALLOWEEENNNNNN.  
@@ -55,7 +56,7 @@ I believe this so whole heartily, I don’t think I’m the person that you shou
 
 “Have enough courage to trust love one more time and always one more time.” -Maya Angelou
 
-I will also continue to live by this quote, I need to continue living as the wind rises. I will be okay. 
+I will also continue to live by this quote, I need to continue living as the wind rises. I will be okay.                                                                               
 Thank you Jill for the times we had. 
 
 
