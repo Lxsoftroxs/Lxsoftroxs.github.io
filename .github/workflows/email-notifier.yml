@@ -2,35 +2,34 @@ name: Notify Subscribers of New Content
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
     paths:
       - "_posts/**"
   workflow_dispatch:
     inputs:
       post_path:
-        description: "Path to a post to notify about (e.g., _posts/2025-10-14-my-post.md). If empty, latest post is used."
+        description: "Path to post (e.g. _posts/2025-10-14-my-post.md). If empty, latest post is used."
         required: false
         type: string
       custom_url:
-        description: "Override URL (optional). If provided, this will be used instead of deriving from filename."
+        description: "Override URL (optional)."
         required: false
         type: string
       subject_prefix:
-        description: "Subject prefix (e.g., 'New Post' or 'Update')."
+        description: "Subject prefix (e.g., New Post, Update)."
         required: false
         default: "New Post"
         type: string
       custom_message:
-        description: "Extra message to include in the email body (optional)."
+        description: "Extra message appended to the email body (optional)."
         required: false
         type: string
       emails_csv:
-        description: "Comma-separated list of emails (optional override of subscribers.json)."
+        description: "Comma-separated recipient list (overrides subscribers.json)."
         required: false
         type: string
       dry_run:
-        description: "If true, compute everything but do not send email."
+        description: "If true, do everything except send."
         required: false
         default: false
         type: boolean
@@ -71,7 +70,6 @@ jobs:
         env:
           INPUT_EMAILS: ${{ github.event.inputs.emails_csv }}
         run: |
-          # If manual override provided, use it; else load from subscribers.json if present.
           if [ -n "$INPUT_EMAILS" ]; then
             echo "EMAIL_LIST=$INPUT_EMAILS" >> "$GITHUB_ENV"
             echo "source=override" >> "$GITHUB_OUTPUT"
@@ -95,105 +93,149 @@ jobs:
           INPUT_SUBJECT_PREFIX: ${{ github.event.inputs.subject_prefix }}
           INPUT_CUSTOM_MESSAGE: ${{ github.event.inputs.custom_message }}
         run: |
-          set -e
+          set -euo pipefail
 
-          # Defaults
           SUBJECT_PREFIX="${INPUT_SUBJECT_PREFIX:-New Post}"
           echo "SUBJECT_PREFIX=$SUBJECT_PREFIX" >> "$GITHUB_ENV"
-          echo "CUSTOM_MESSAGE=$INPUT_CUSTOM_MESSAGE" >> "$GITHUB_ENV"
+          echo "CUSTOM_MESSAGE=${INPUT_CUSTOM_MESSAGE:-}" >> "$GITHUB_ENV"
 
-          pick_latest_post() {
-            # Prefer git order (most recently committed), fallback to filesystem time
-            latest=$(git ls-files _posts/*.md 2>/dev/null | xargs -r -I{} git log -1 --format='%ct %H %n{}' -- {} \
-              | paste - - - \
-              | sort -nrk1 \
-              | awk '{print $3; exit}')
-            if [ -z "$latest" ]; then
-              latest=$(ls -t _posts/*.md 2>/dev/null | head -n1 || true)
-            fi
-            echo "$latest"
+          # Read config values if present
+          SITE_URL=""
+          BASEURL=""
+          CONFIG_PERMALINK=""
+          if [ -f _config.yml ]; then
+            SITE_URL=$(awk -F': *' '/^url:/{print $2}' _config.yml | tr -d '"'\''')
+            BASEURL=$(awk -F': *' '/^baseurl:/{print $2}' _config.yml | tr -d '"'\''')
+            CONFIG_PERMALINK=$(awk -F': *' '/^permalink:/{print $2}' _config.yml | tr -d '"'\''')
+          fi
+          # Fallbacks for GitHub Pages default domain if no url set
+          if [ -z "$SITE_URL" ]; then
+            SITE_URL="https://lxsoftroxs.github.io"
+          fi
+          # Ensure baseurl starts with slash or empty
+          if [ -n "$BASEURL" ] && [ "${BASEURL#'/'}" = "$BASEURL" ]; then
+            BASEURL="/$BASEURL"
+          fi
+
+          trim_quotes(){
+            val="$1"
+            # strip ONE pair of leading/trailing single OR double quotes
+            val="${val%\"}"; val="${val#\"}"
+            val="${val%\'}"; val="${val#\'}"
+            printf '%s' "$val"
           }
 
-          resolve_title_and_url() {
+          # Resolve permalink for a given post path:
+          # Priority: front-matter "permalink:" -> known _config.yml patterns -> default (/Y/M/D/title.html)
+          resolve_title_and_url(){
             local path="$1"
-            # Title from YAML front matter (strip optional quotes)
-            local title
-            title=$(grep -m1 '^title:' "$path" | sed 's/^title:[[:space:]]*["'\''"]\?\(.*\)["'\''"]\?$/\1/')
-            if [ -z "$title" ]; then
-              title=$(basename "$path" .md)
-            fi
+            local fname year month day slug title permalink fm_perm
 
-            local url
-            if [ -n "$INPUT_CUSTOM_URL" ]; then
-              url="$INPUT_CUSTOM_URL"
+            fname=$(basename "$path" .md)
+            year=$(echo "$fname" | cut -d'-' -f1)
+            month=$(echo "$fname" | cut -d'-' -f2)
+            day=$(echo "$fname" | cut -d'-' -f3)
+            slug=$(echo "$fname" | cut -d'-' -f4-)
+
+            # YAML front matter: title & permalink
+            title=$(grep -m1 '^title:' "$path" | sed 's/^title:[[:space:]]*//')
+            title=$(trim_quotes "${title:-$fname}")
+
+            fm_perm=$(grep -m1 '^permalink:' "$path" | sed 's/^permalink:[[:space:]]*//')
+            fm_perm=$(trim_quotes "${fm_perm:-}")
+
+            if [ -n "${INPUT_CUSTOM_URL:-}" ]; then
+              permalink="$INPUT_CUSTOM_URL"
+            elif [ -n "$fm_perm" ]; then
+              # Use front-matter permalink verbatim
+              permalink="$fm_perm"
+              # ensure leading slash
+              case "$permalink" in
+                http*://*) ;; # absolute
+                /*) ;;        # ok
+                *) permalink="/$permalink" ;;
+              esac
+              # final URL:
+              :
             else
-              # Build URL: _posts/YYYY-MM-DD-slug.md → /YYYY/MM/DD/slug.html
-              local fname year month day slug
-              fname=$(basename "$path" .md)
-              year=$(echo "$fname" | cut -d'-' -f1)
-              month=$(echo "$fname" | cut -d'-' -f2)
-              day=$(echo "$fname" | cut -d'-' -f3)
-              slug=$(echo "$fname" | cut -d'-' -f4-)
-              url="https://lxsoftroxs.github.io/$year/$month/$day/$slug.html"
+              # Try to honor a few common config permalink patterns
+              case "$CONFIG_PERMALINK" in
+                "/:year/:month/:day/:title/" )
+                  permalink="/$year/$month/$day/$slug/";;
+                "/:year/:month/:day/:title.html" )
+                  permalink="/$year/$month/$day/$slug.html";;
+                "/:title/" )
+                  permalink="/$slug/";;
+                "/:title.html" )
+                  permalink="/$slug.html";;
+                * )
+                  # Default Jekyll posts permalink:
+                  permalink="/$year/$month/$day/$slug.html";;
+              esac
             fi
 
+            # If permalink is absolute URL already, use as-is; else prefix site url + baseurl
+            if echo "$permalink" | grep -qE '^https?://'; then
+              echo "POST_URL=$permalink" >> "$GITHUB_ENV"
+            else
+              # Collapse double slashes cautiously
+              full="$SITE_URL${BASEURL%/}$permalink"
+              echo "POST_URL=$full" >> "$GITHUB_ENV"
+            fi
             echo "POST_TITLE=$title" >> "$GITHUB_ENV"
-            echo "POST_URL=$url" >> "$GITHUB_ENV"
+          }
+
+          pick_latest_post(){
+            # newest by commit time
+            git ls-files _posts/*.md 2>/dev/null | xargs -r -I{} git log -1 --format='%ct %H %n{}' -- {} \
+              | paste - - - \
+              | sort -nrk1 \
+              | awk '{print $3; exit}'
           }
 
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            # MANUAL MODE: use input path if provided, else latest post
-            if [ -n "$INPUT_POST_PATH" ]; then
-              if [ ! -f "$INPUT_POST_PATH" ]; then
-                echo "Error: Provided post_path '$INPUT_POST_PATH' does not exist." >&2
-                exit 1
-              fi
+            if [ -n "${INPUT_POST_PATH:-}" ]; then
+              [ -f "$INPUT_POST_PATH" ] || { echo "Error: post_path '$INPUT_POST_PATH' not found"; exit 1; }
               TARGET="$INPUT_POST_PATH"
             else
               TARGET="$(pick_latest_post)"
-              if [ -z "$TARGET" ]; then
-                echo "Error: No posts found in _posts/." >&2
-                exit 1
-              fi
+              [ -n "$TARGET" ] || { echo "Error: No posts in _posts/"; exit 1; }
             fi
             echo "mode=manual" >> "$GITHUB_OUTPUT"
-            echo "TARGET=$TARGET"
             resolve_title_and_url "$TARGET"
             echo "skip=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # PUSH MODE: only notify if a post was ADDED in this push
+          # push mode: only when a file was ADDED in this push
           is_valid_before=false
-          if [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+          if [ -n "${BEFORE:-}" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             is_valid_before=true
           fi
 
           NEW_POST=""
           if [ "$is_valid_before" = true ]; then
-            NEW_POST=$(git diff --name-only --diff-filter=A "$BEFORE" "$SHA" -- '_posts/*.md' | head -n1)
+            NEW_POST=$(git diff --name-only --diff-filter=A "$BEFORE" "$SHA" -- '_posts/*.md' | head -n1 || true)
           fi
           if [ -z "$NEW_POST" ]; then
-            # Fallback: files added in this commit (covers first commit / force-push)
-            NEW_POST=$(git diff-tree --no-commit-id --name-only --diff-filter=A -r "$SHA" -- '_posts/*.md' | head -n1)
+            NEW_POST=$(git diff-tree --no-commit-id --name-only --diff-filter=A -r "$SHA" -- '_posts/*.md' | head -n1 || true)
           fi
 
           if [ -z "$NEW_POST" ]; then
-            echo "No new post added in this push – skipping notification."
+            echo "No new post added in this push – skipping."
             echo "mode=push" >> "$GITHUB_OUTPUT"
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           echo "mode=push" >> "$GITHUB_OUTPUT"
-          echo "TARGET=$NEW_POST"
           resolve_title_and_url "$NEW_POST"
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Summary (what would be sent)
         run: |
           echo "Recipient source: ${{ steps.recipients.outputs.source }}"
-          echo "Email list length: $( [ -n "${EMAIL_LIST}" ] && echo "${EMAIL_LIST}" | awk -F',' '{print NF}' || echo 0 )"
+          echo "Email count: $( [ -n "${EMAIL_LIST}" ] && echo "${EMAIL_LIST}" | awk -F',' '{print NF}' || echo 0 )"
           echo "Subject prefix: ${SUBJECT_PREFIX}"
           echo "Post title: ${POST_TITLE}"
           echo "Post URL: ${POST_URL}"
@@ -212,7 +254,7 @@ jobs:
           {
             echo "Subject: ${SUBJECT}"
             echo
-            echo "Check out the post: \"${POST_TITLE}\""
+            echo "Check out the post: ${POST_TITLE}"
             echo "${POST_URL}"
             if [ -n "${CUSTOM_MESSAGE}" ]; then
               echo
