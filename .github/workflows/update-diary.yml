@@ -1,0 +1,35 @@
+name: Update Diary Photos
+
+on:
+  push:
+    paths:
+      - 'assets/diary/**'       # only run if photos change
+      - '.github/scripts/update_diary.py'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # we’ll use our own token to push
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Run diary updater
+        run: python .github/scripts/update_diary.py
+
+      - name: Commit & push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "auto: update diary photos"
+          commit_user_name: github-actions
+          commit_user_email: actions@github.com
