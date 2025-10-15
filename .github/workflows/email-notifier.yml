@@ -50,13 +50,13 @@ jobs:
 
       - name: Install msmtp and jq
         run: |
-          set -eo pipefail
+          set -e
           sudo apt-get update
           sudo apt-get install -y msmtp jq
 
       - name: Configure msmtp
         run: |
-          set -eo pipefail
+          set -e
           cat <<EOF > ~/.msmtprc
           account default
           host smtp.gmail.com
@@ -76,7 +76,7 @@ jobs:
         env:
           INPUT_EMAILS: ${{ github.event.inputs.emails_csv }}
         run: |
-          set -eo pipefail
+          set -e
           if [ -n "${INPUT_EMAILS:-}" ]; then
             echo "EMAIL_LIST=$INPUT_EMAILS" >> "$GITHUB_ENV"
             echo "source=override" >> "$GITHUB_OUTPUT"
@@ -100,16 +100,15 @@ jobs:
           INPUT_SUBJECT_PREFIX: ${{ github.event.inputs.subject_prefix }}
           INPUT_CUSTOM_MESSAGE: ${{ github.event.inputs.custom_message }}
         run: |
-          set -eo pipefail
-
-          # Small trace so failures are obvious
+          set -e
           echo "::group::Detect target post"
 
+          # Inputs / defaults
           SUBJECT_PREFIX="${INPUT_SUBJECT_PREFIX:-New Post}"
           echo "SUBJECT_PREFIX=$SUBJECT_PREFIX" >> "$GITHUB_ENV"
           echo "CUSTOM_MESSAGE=${INPUT_CUSTOM_MESSAGE:-}" >> "$GITHUB_ENV"
 
-          # Read config values if present
+          # Read site config if present
           SITE_URL=""
           BASEURL=""
           CONFIG_PERMALINK=""
@@ -118,18 +117,13 @@ jobs:
             BASEURL=$(awk -F': *' '/^baseurl:/{print $2}' _config.yml | tr -d '"'\''')
             CONFIG_PERMALINK=$(awk -F': *' '/^permalink:/{print $2}' _config.yml | tr -d '"'\''')
           fi
-          # fallback for GH Pages default
-          if [ -z "$SITE_URL" ]; then
-            SITE_URL="https://lxsoftroxs.github.io"
-          fi
-          # ensure baseurl begins with slash (or empty)
+          [ -n "$SITE_URL" ] || SITE_URL="https://lxsoftroxs.github.io"
           if [ -n "$BASEURL" ] && [ "${BASEURL#'/'}" = "$BASEURL" ]; then
             BASEURL="/$BASEURL"
           fi
 
           trim_quotes() {
-            val="$1"
-            # strip one pair of leading/trailing " or '
+            local val="$1"
             val="${val%\"}"; val="${val#\"}"
             val="${val%\'}"; val="${val#\'}"
             printf '%s' "$val"
@@ -145,13 +139,16 @@ jobs:
             day=$(echo "$fname" | cut -d'-' -f3)
             slug=$(echo "$fname" | cut -d'-' -f4-)
 
-            # Safe grep: don't fail step if not found
+            # Safe fetch of front-matter lines
+            local title_line fm_perm_line
             title_line=$(grep -m1 '^title:' "$path" || true)
-            title_raw="${title_line#title: }"
-            title=$(trim_quotes "${title_raw:-$fname}")
-
             fm_perm_line=$(grep -m1 '^permalink:' "$path" || true)
+
+            local title_raw fm_perm_raw
+            title_raw="${title_line#title: }"
             fm_perm_raw="${fm_perm_line#permalink: }"
+
+            title=$(trim_quotes "${title_raw:-$fname}")
             fm_perm=$(trim_quotes "${fm_perm_raw:-}")
 
             if [ -n "${INPUT_CUSTOM_URL:-}" ]; then
@@ -159,8 +156,8 @@ jobs:
             elif [ -n "$fm_perm" ]; then
               permalink="$fm_perm"
               case "$permalink" in
-                http*://*) ;; # absolute OK
-                /*) ;;        # leading slash OK
+                http*://*) ;; # absolute
+                /*) ;;        # site-root
                 *) permalink="/$permalink" ;;
               esac
             else
@@ -178,19 +175,25 @@ jobs:
               esac
             fi
 
-            if echo "$permalink" | grep -qE '^https?://'; then
+            if [[ "$permalink" =~ ^https?:// ]]; then
               echo "POST_URL=$permalink" >> "$GITHUB_ENV"
             else
-              full="$SITE_URL${BASEURL%/}$permalink"
-              echo "POST_URL=$full" >> "$GITHUB_ENV"
+              echo "POST_URL=${SITE_URL}${BASEURL%/}$permalink" >> "$GITHUB_ENV"
             fi
             echo "POST_TITLE=$title" >> "$GITHUB_ENV"
           }
 
           pick_latest_post() {
-            # Most recently touched post by commit history (robust & simple)
-            git log --pretty=format: --name-only -- _posts/*.md \
-              | awk '/^_posts\/.*\.md$/ {print; exit}'
+            # Avoid head/early-exit pipes: collect into an array and take first
+            # Most recent by commit order that touched _posts/*.md
+            mapfile -t touched < <( git log --pretty=format: --name-only -- _posts/*.md | awk '/^_posts\/.*\.md$/' )
+            if [ "${#touched[@]}" -gt 0 ]; then
+              printf '%s\n' "${touched[0]}"
+            else
+              # Fallback to newest by mtime
+              mapfile -t by_time < <( ls -t _posts/*.md 2>/dev/null || true )
+              [ "${#by_time[@]}" -gt 0 ] && printf '%s\n' "${by_time[0]}"
+            fi
           }
 
           if [ "${EVENT_NAME:-}" = "workflow_dispatch" ]; then
@@ -209,7 +212,7 @@ jobs:
             exit 0
           fi
 
-          # push mode: only when a file was ADDED in this push
+          # PUSH mode: only when a file was ADDED in this push
           is_valid_before=false
           if [ -n "${BEFORE:-}" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             is_valid_before=true
@@ -217,10 +220,16 @@ jobs:
 
           NEW_POST=""
           if [ "$is_valid_before" = true ]; then
-            NEW_POST=$(git diff --name-only --diff-filter=A "$BEFORE" "$SHA" -- '_posts/*.md' | head -n1 || true)
+            mapfile -t added_range < <( git diff --name-only --diff-filter=A "$BEFORE" "$SHA" -- '_posts/*.md' || true )
+            if [ "${#added_range[@]}" -gt 0 ]; then
+              NEW_POST="${added_range[0]}"
+            fi
           fi
           if [ -z "$NEW_POST" ]; then
-            NEW_POST=$(git diff-tree --no-commit-id --name-only --diff-filter=A -r "$SHA" -- '_posts/*.md' | head -n1 || true)
+            mapfile -t added_commit < <( git diff-tree --no-commit-id --name-only --diff-filter=A -r "$SHA" -- '_posts/*.md' || true )
+            if [ "${#added_commit[@]}" -gt 0 ]; then
+              NEW_POST="${added_commit[0]}"
+            fi
           fi
 
           if [ -z "$NEW_POST" ]; then
@@ -239,7 +248,7 @@ jobs:
 
       - name: Summary (what would be sent)
         run: |
-          set -eo pipefail
+          set -e
           echo "Recipient source: ${{ steps.recipients.outputs.source }}"
           echo "Email count: $( [ -n "${EMAIL_LIST}" ] && echo "${EMAIL_LIST}" | awk -F',' '{print NF}' || echo 0 )"
           echo "Subject prefix: ${SUBJECT_PREFIX}"
@@ -256,7 +265,7 @@ jobs:
           POST_URL: ${{ env.POST_URL }}
           CUSTOM_MESSAGE: ${{ env.CUSTOM_MESSAGE }}
         run: |
-          set -eo pipefail
+          set -e
           SUBJECT="${SUBJECT_PREFIX}: ${POST_TITLE}"
           {
             echo "Subject: ${SUBJECT}"
