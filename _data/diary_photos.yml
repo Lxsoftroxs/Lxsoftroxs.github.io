@@ -1,6 +1,9 @@
-- id: 2025-01-01-1
-  src: /assets/diary/one.jpg   # use your paths; /assets/journal/... also fine
-  caption: 1
-- id: 2025-02-10-2
-  src: /assets/diary/two.jpg
-  caption: 2
+- id: photo_001
+  src: /assets/diary/photo_001.jpg
+  caption: Untitled 001
+- id: photo_002
+  src: /assets/diary/photo_002.jpg
+  caption: Untitled 002
+- id: photo_003
+  src: /assets/diary/photo_003.jpg
+  caption: Untitled 003
