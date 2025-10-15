@@ -103,31 +103,47 @@ jobs:
           set -e
           echo "::group::Detect target post"
 
+          # --- helpers ---
+          strip_inline_comment() { sed 's/[[:space:]]*#.*$//' ; }
+          strip_quotes_trim() { tr -d '"'\'' | awk '{$1=$1;print}'; }
+          ensure_leading_slash() {
+            local v="$1"
+            if [ -z "$v" ]; then printf ""; return; fi
+            case "$v" in
+              /*) printf "%s" "$v" ;;
+              *)  printf "/%s" "$v" ;;
+            esac
+          }
+          trim_quotes() {
+            local v="$1"
+            v="${v%\"}"; v="${v#\"}"
+            v="${v%\'}"; v="${v#\'}"
+            printf '%s' "$v"
+          }
+
           # Inputs / defaults
           SUBJECT_PREFIX="${INPUT_SUBJECT_PREFIX:-New Post}"
           echo "SUBJECT_PREFIX=$SUBJECT_PREFIX" >> "$GITHUB_ENV"
           echo "CUSTOM_MESSAGE=${INPUT_CUSTOM_MESSAGE:-}" >> "$GITHUB_ENV"
 
-          # Read site config if present
+          # --- read _config.yml safely (strip inline # comments & quotes) ---
           SITE_URL=""
           BASEURL=""
           CONFIG_PERMALINK=""
           if [ -f _config.yml ]; then
-            SITE_URL=$(awk -F': *' '/^url:/{print $2}' _config.yml | tr -d '"'\''')
-            BASEURL=$(awk -F': *' '/^baseurl:/{print $2}' _config.yml | tr -d '"'\''')
-            CONFIG_PERMALINK=$(awk -F': *' '/^permalink:/{print $2}' _config.yml | tr -d '"'\''')
-          fi
-          [ -n "$SITE_URL" ] || SITE_URL="https://lxsoftroxs.github.io"
-          if [ -n "$BASEURL" ] && [ "${BASEURL#'/'}" = "$BASEURL" ]; then
-            BASEURL="/$BASEURL"
+            SITE_URL=$(sed -n 's/^url:[[:space:]]*//p' _config.yml | head -n1 | strip_inline_comment | strip_quotes_trim)
+            BASEURL=$(sed -n 's/^baseurl:[[:space:]]*//p' _config.yml | head -n1 | strip_inline_comment | strip_quotes_trim)
+            CONFIG_PERMALINK=$(sed -n 's/^permalink:[[:space:]]*//p' _config.yml | head -n1 | strip_inline_comment | strip_quotes_trim)
           fi
 
-          trim_quotes() {
-            local val="$1"
-            val="${val%\"}"; val="${val#\"}"
-            val="${val%\'}"; val="${val#\'}"
-            printf '%s' "$val"
-          }
+          # Fallback url if empty; normalize baseurl leading slash
+          [ -n "$SITE_URL" ] || SITE_URL="https://lxsoftroxs.github.io"
+          # If someone wrote //user.github.io, add scheme
+          if echo "$SITE_URL" | grep -qE '^//'; then SITE_URL="https:${SITE_URL}"; fi
+          # Ensure SITE_URL has scheme
+          if ! echo "$SITE_URL" | grep -qE '^https?://'; then SITE_URL="https://$SITE_URL"; fi
+          # Normalize baseurl to start with / (or empty)
+          if [ -n "$BASEURL" ]; then BASEURL="$(ensure_leading_slash "$BASEURL")"; fi
 
           resolve_title_and_url() {
             local path="$1"
@@ -139,14 +155,12 @@ jobs:
             day=$(echo "$fname" | cut -d'-' -f3)
             slug=$(echo "$fname" | cut -d'-' -f4-)
 
-            # Safe fetch of front-matter lines
-            local title_line fm_perm_line
+            local title_line fm_perm_line title_raw fm_perm_raw
             title_line=$(grep -m1 '^title:' "$path" || true)
             fm_perm_line=$(grep -m1 '^permalink:' "$path" || true)
 
-            local title_raw fm_perm_raw
-            title_raw="${title_line#title: }"
-            fm_perm_raw="${fm_perm_line#permalink: }"
+            title_raw=$(echo "${title_line#title: }" | strip_inline_comment | strip_quotes_trim)
+            fm_perm_raw=$(echo "${fm_perm_line#permalink: }" | strip_inline_comment | strip_quotes_trim)
 
             title=$(trim_quotes "${title_raw:-$fname}")
             fm_perm=$(trim_quotes "${fm_perm_raw:-}")
@@ -156,8 +170,8 @@ jobs:
             elif [ -n "$fm_perm" ]; then
               permalink="$fm_perm"
               case "$permalink" in
-                http*://*) ;; # absolute
-                /*) ;;        # site-root
+                http*://*) ;; # absolute ok
+                /*) ;;        # site-root ok
                 *) permalink="/$permalink" ;;
               esac
             else
@@ -175,22 +189,26 @@ jobs:
               esac
             fi
 
-            if [[ "$permalink" =~ ^https?:// ]]; then
+            # Build final URL safely (no dup slashes; include scheme)
+            if echo "$permalink" | grep -qE '^https?://'; then
               echo "POST_URL=$permalink" >> "$GITHUB_ENV"
             else
-              echo "POST_URL=${SITE_URL}${BASEURL%/}$permalink" >> "$GITHUB_ENV"
+              # ensure permalink starts with /
+              case "$permalink" in
+                /*) ;; *) permalink="/$permalink" ;;
+              esac
+              local full="${SITE_URL%/}${BASEURL%/}${permalink}"
+              echo "POST_URL=$full" >> "$GITHUB_ENV"
             fi
             echo "POST_TITLE=$title" >> "$GITHUB_ENV"
           }
 
           pick_latest_post() {
-            # Avoid head/early-exit pipes: collect into an array and take first
-            # Most recent by commit order that touched _posts/*.md
+            # Most recent by commit history touching _posts; fallback mtime
             mapfile -t touched < <( git log --pretty=format: --name-only -- _posts/*.md | awk '/^_posts\/.*\.md$/' )
             if [ "${#touched[@]}" -gt 0 ]; then
               printf '%s\n' "${touched[0]}"
             else
-              # Fallback to newest by mtime
               mapfile -t by_time < <( ls -t _posts/*.md 2>/dev/null || true )
               [ "${#by_time[@]}" -gt 0 ] && printf '%s\n' "${by_time[0]}"
             fi
@@ -221,15 +239,11 @@ jobs:
           NEW_POST=""
           if [ "$is_valid_before" = true ]; then
             mapfile -t added_range < <( git diff --name-only --diff-filter=A "$BEFORE" "$SHA" -- '_posts/*.md' || true )
-            if [ "${#added_range[@]}" -gt 0 ]; then
-              NEW_POST="${added_range[0]}"
-            fi
+            if [ "${#added_range[@]}" -gt 0 ]; then NEW_POST="${added_range[0]}"; fi
           fi
           if [ -z "$NEW_POST" ]; then
             mapfile -t added_commit < <( git diff-tree --no-commit-id --name-only --diff-filter=A -r "$SHA" -- '_posts/*.md' || true )
-            if [ "${#added_commit[@]}" -gt 0 ]; then
-              NEW_POST="${added_commit[0]}"
-            fi
+            if [ "${#added_commit[@]}" -gt 0 ]; then NEW_POST="${added_commit[0]}"; fi
           fi
 
           if [ -z "$NEW_POST" ]; then
