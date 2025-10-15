@@ -1,23 +1,27 @@
 name: Update Diary Photos
 
 on:
+  # ✅ Manual trigger button in the Actions tab
+  workflow_dispatch:
+
+  # ✅ Automatic trigger when photos or script change
   push:
     paths:
       - 'assets/diary/**'
       - '.github/scripts/update_diary.py'
 
 permissions:
-  contents: write   # ✅ allows pushing changes back to the repo
+  contents: write  # needed for committing back to repo
 
 jobs:
-  build:
+  update:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}   # ✅ ensures repo push access
+          token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
 
       - name: Set up Python
@@ -27,6 +31,11 @@ jobs:
 
       - name: Install PyYAML
         run: pip install pyyaml
+
+      # Optional: image optimization before renaming
+      # - name: Optimize images (ImageMagick)
+      #   run: sudo apt-get update && sudo apt-get install -y imagemagick && \
+      #        mogrify -resize 1600x1600\> -quality 85 assets/diary/*.{jpg,jpeg,png}
 
       - name: Run diary updater
         run: python .github/scripts/update_diary.py
@@ -38,5 +47,4 @@ jobs:
           commit_user_name: github-actions
           commit_user_email: actions@github.com
           push_options: '--force'
-          # ✅ use built-in token to push
           token: ${{ secrets.GITHUB_TOKEN }}
