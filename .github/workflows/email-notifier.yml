@@ -102,7 +102,9 @@ jobs:
         run: |
           set -eo pipefail
 
-          # Defaults
+          # Small trace so failures are obvious
+          echo "::group::Detect target post"
+
           SUBJECT_PREFIX="${INPUT_SUBJECT_PREFIX:-New Post}"
           echo "SUBJECT_PREFIX=$SUBJECT_PREFIX" >> "$GITHUB_ENV"
           echo "CUSTOM_MESSAGE=${INPUT_CUSTOM_MESSAGE:-}" >> "$GITHUB_ENV"
@@ -125,7 +127,7 @@ jobs:
             BASEURL="/$BASEURL"
           fi
 
-          trim_quotes(){
+          trim_quotes() {
             val="$1"
             # strip one pair of leading/trailing " or '
             val="${val%\"}"; val="${val#\"}"
@@ -133,9 +135,9 @@ jobs:
             printf '%s' "$val"
           }
 
-          resolve_title_and_url(){
+          resolve_title_and_url() {
             local path="$1"
-            local fname year month day slug title permalink fm_perm
+            local fname year month day slug title fm_perm permalink
 
             fname=$(basename "$path" .md)
             year=$(echo "$fname" | cut -d'-' -f1)
@@ -143,11 +145,14 @@ jobs:
             day=$(echo "$fname" | cut -d'-' -f3)
             slug=$(echo "$fname" | cut -d'-' -f4-)
 
-            title=$(grep -m1 '^title:' "$path" | sed 's/^title:[[:space:]]*//')
-            title=$(trim_quotes "${title:-$fname}")
+            # Safe grep: don't fail step if not found
+            title_line=$(grep -m1 '^title:' "$path" || true)
+            title_raw="${title_line#title: }"
+            title=$(trim_quotes "${title_raw:-$fname}")
 
-            fm_perm=$(grep -m1 '^permalink:' "$path" | sed 's/^permalink:[[:space:]]*//')
-            fm_perm=$(trim_quotes "${fm_perm:-}")
+            fm_perm_line=$(grep -m1 '^permalink:' "$path" || true)
+            fm_perm_raw="${fm_perm_line#permalink: }"
+            fm_perm=$(trim_quotes "${fm_perm_raw:-}")
 
             if [ -n "${INPUT_CUSTOM_URL:-}" ]; then
               permalink="$INPUT_CUSTOM_URL"
@@ -182,12 +187,10 @@ jobs:
             echo "POST_TITLE=$title" >> "$GITHUB_ENV"
           }
 
-          pick_latest_post(){
-            # newest by commit time
-            git ls-files _posts/*.md 2>/dev/null | xargs -r -I{} git log -1 --format='%ct %H %n{}' -- {} \
-              | paste - - - \
-              | sort -nrk1 \
-              | awk '{print $3; exit}'
+          pick_latest_post() {
+            # Most recently touched post by commit history (robust & simple)
+            git log --pretty=format: --name-only -- _posts/*.md \
+              | awk '/^_posts\/.*\.md$/ {print; exit}'
           }
 
           if [ "${EVENT_NAME:-}" = "workflow_dispatch" ]; then
@@ -199,8 +202,10 @@ jobs:
               [ -n "$TARGET" ] || { echo "Error: No posts in _posts/"; exit 1; }
             fi
             echo "mode=manual" >> "$GITHUB_OUTPUT"
+            echo "Target: $TARGET"
             resolve_title_and_url "$TARGET"
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "::endgroup::"
             exit 0
           fi
 
@@ -222,12 +227,15 @@ jobs:
             echo "No new post added in this push – skipping."
             echo "mode=push" >> "$GITHUB_OUTPUT"
             echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::endgroup::"
             exit 0
           fi
 
           echo "mode=push" >> "$GITHUB_OUTPUT"
+          echo "Target (added): $NEW_POST"
           resolve_title_and_url "$NEW_POST"
           echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
 
       - name: Summary (what would be sent)
         run: |
