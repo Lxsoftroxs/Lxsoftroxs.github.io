@@ -11,3 +11,6 @@ collections:
   poetry:
     output: true
     permalink: /poetry/:title/
+  pages:
+    output: true
+    permalink: /:path/
