@@ -4,10 +4,9 @@ title: Secret Section
 permalink: /secret/
 ---
 
-# 🔒 Secret Section
+# Woah Watch Where You click Buddy
 
 Enter your password to view the encrypted content.  
-This runs completely in your browser — no data ever leaves your device.
 
 <div id="decryptor">
   <input id="pw" type="password" placeholder="Password">
@@ -26,7 +25,7 @@ async function decrypt() {
     if (!text) throw new Error();
     document.getElementById('output').textContent = text;
   } catch {
-    document.getElementById('output').textContent = "❌ Incorrect password.";
+    document.getElementById('output').textContent = "Incorrect password.";
   }
 }
 document.getElementById('unlock').onclick = decrypt;
