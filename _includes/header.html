@@ -1,69 +1,48 @@
-<header class="site-header">
-  <div class="header-inner">
-    <h1 class="site-title">{{ site.title }}</h1>
-    <nav class="site-nav">
-      <ul class="site-nav-list">
-        <li><a href="{{ '/' | relative_url }}">Home</a></li>
-        <li><a href="{{ '/poetry/' | relative_url }}">Poetry</a></li>
-        <li><a href="{{ '/gallery/' | relative_url }}">Gallery</a></li>
-        <li><a href="{{ '/quotes/' | relative_url }}">Quotes</a></li>
-        <li><a href="{{ '/projects/' | relative_url }}">Projects</a></li>
-        <li><a href="{{ '/patrons/' | relative_url }}">Patrons</a></li>
-        <li><a href="{{ '/journal/' | relative_url }}">Daily Entries</a></li>
-        <li><a href="{{ '/diary/' | relative_url }}">Diary</a></li>
-        <li><a href="{{ '/listening/' | relative_url }}">Listening</a></li>
-        <li><a href="{{ '/secret/' | relative_url }}">Secret</a></li>
-        <li><a href="{{ '/encrypt/' | relative_url }}">Encrypt</a></li>
-      </ul>
-      <div class="site-nav-dropdown">
-        <label for="site-nav-select" class="sr-only">Navigate to</label>
-        <select id="site-nav-select" class="nav-select">
-          <option value="" disabled selected>Navigate to…</option>
-          <option value="{{ '/' | relative_url }}">Home</option>
-          <option value="{{ '/poetry/' | relative_url }}">Poetry</option>
-          <option value="{{ '/gallery/' | relative_url }}">Gallery</option>
-          <option value="{{ '/quotes/' | relative_url }}">Quotes</option>
-          <option value="{{ '/projects/' | relative_url }}">Projects</option>
-          <option value="{{ '/patrons/' | relative_url }}">Patrons</option>
-          <option value="{{ '/journal/' | relative_url }}">Daily Entries</option>
-          <option value="{{ '/diary/' | relative_url }}">Diary</option>
-          <option value="{{ '/listening/' | relative_url }}">Listening</option>
-          <option value="{{ '/secret/' | relative_url }}">Secret</option>
-          <option value="{{ '/encrypt/' | relative_url }}">Encrypt</option>
-        </select>
-      </div>
-    </nav>
-  </div>
-</header>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    var select = document.getElementById('site-nav-select');
-    if (!select) return;
-
-    var currentPath = window.location.pathname.replace(/index.html$/, '');
-    var found = false;
-    for (var i = 0; i < select.options.length; i++) {
-      if (select.options[i].value === currentPath) {
-        select.selectedIndex = i;
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      select.selectedIndex = 0;
-    }
-
-    select.addEventListener('change', function () {
-      var target = this.value;
-      if (target) {
-        window.location.href = target;
-      }
-    });
-  });
-</script>
-
-
-
-
+ <header class="site-header">
+   <div class="header-inner">
+     <h1 class="site-title">{{ site.title }}</h1>
+       <div class="site-nav-dropdown">
+         <label for="site-nav-select" class="sr-only">Navigate to</label>
+         <select id="site-nav-select" class="nav-select">
+     <nav class="site-nav">
+       <div class="site-nav-dropdown">
+         <label for="site-nav-select" class="sr-only">Navigate to</label>
+         <select id="site-nav-select" class="nav-select">
+           <option value="" disabled selected>Navigate to…</option>
+           <option value="{{ '/' | relative_url }}">Home</option>
+           <option value="{{ '/poetry/' | relative_url }}">Poetry</option>
+           <option value="{{ '/gallery/' | relative_url }}">Gallery</option>
+           <option value="{{ '/quotes/' | relative_url }}">Quotes</option>
+           <option value="{{ '/projects/' | relative_url }}">Projects</option>
+           <option value="{{ '/patrons/' | relative_url }}">Patrons</option>
+           <option value="{{ '/journal/' | relative_url }}">Daily Entries</option>
+           <option value="{{ '/diary/' | relative_url }}">Diary</option>
+           <option value="{{ '/listening/' | relative_url }}">Listening</option>
+           <option value="{{ '/secret/' | relative_url }}">Secret</option>
+           <option value="{{ '/encrypt/' | relative_url }}">Encrypt</option>
+         </select>
+       </div>
+     </nav>
+   </div>
+ </header>
+ 
+ <script>
+   document.addEventListener('DOMContentLoaded', function () {
+     var select = document.getElementById('site-nav-select');
+     if (!select) return;
+ 
+     var currentPath = window.location.pathname.replace(/index.html$/, '');
+     var found = false;
+     for (var i = 0; i < select.options.length; i++) {
+       if (select.options[i].value === currentPath) {
+         select.selectedIndex = i;
+         found = true;
+         break;
+       }
+     }
+ 
+     if (!found) {
+       select.selectedIndex = 0;
+     }
+ 
