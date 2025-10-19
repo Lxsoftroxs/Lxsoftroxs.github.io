@@ -16,11 +16,11 @@ permalink: /quotes/
 “In the moment when I truly understand my enemy, understand him well enough to defeat him, then in that very moment I also love him. I think it’s impossible to really understand somebody, what they want, what they believe, and not love them the way they love themselves.”                  
 — Orson Scott Card
 
-"I am the beast I worship" 
--- Death Grips
+"I am the beast I worship"                           
+— Death Grips
 
-"'We're all dreaming, aren't we?' she says.
-All of us are dreaming.
-'Why did you have to die?'
-"'I couldn't help it,' you reply."
--- Haruki Murakami
+"'We're all dreaming, aren't we?' she says.                                          
+All of us are dreaming.                         
+'Why did you have to die?'                    
+"'I couldn't help it,' you reply."             
+— Haruki Murakami
