@@ -1,0 +1,17 @@
+---
+layout: post
+title: Quotes
+date: 2025-10-18
+permalink: /quotes/
+---
+
+“The universe is a machine for the making of Gods.”  
+— Henri Bergson
+
+
+“My affections and wishes have not changed, but one word from you will silence me forever. If, however, your feelings have changed, I will have to tell you: you have bewitched me, body and soul, and I love--I love--I love you. I never wish to be parted from you from this day on.”            
+— Jane Austen, Pride and Prejudice
+
+
+“In the moment when I truly understand my enemy, understand him well enough to defeat him, then in that very moment I also love him. I think it’s impossible to really understand somebody, what they want, what they believe, and not love them the way they love themselves.”                  
+— Orson Scott Card
