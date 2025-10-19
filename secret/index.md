@@ -5,7 +5,7 @@ date: 2025-10-18
 permalink: /secret/
 ---
 
-Woah Watch Where You click Buddy
+Woah Watch Where You Click Buddy
 
 
 Enter a password to view encrypted content.  
