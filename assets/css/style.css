@@ -53,7 +53,7 @@ a:hover {
 }
 
 .site-nav-dropdown {
-  display: none;
+  display: block;
   width: 100%;
 }
 
