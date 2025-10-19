@@ -1,12 +1,15 @@
 ---
 layout: post
-title: Secret Section
+title: Secrets SHHHHH
+date: 2025-03-15
 permalink: /secret/
 ---
 
-# Woah Watch Where You click Buddy
+Woah Watch Where You click Buddy
 
-Enter your password to view the encrypted content.  
+
+Enter a password to view encrypted content.  
+
 
 <div id="decryptor">
   <input id="pw" type="password" placeholder="Password">
