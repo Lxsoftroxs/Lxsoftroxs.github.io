@@ -17,5 +17,10 @@ permalink: /quotes/
 — Orson Scott Card
 
 "I am the beast I worship" 
-- Death Grips
+-- Death Grips
 
+"'We're all dreaming, aren't we?' she says.
+All of us are dreaming.
+'Why did you have to die?'
+"'I couldn't help it,' you reply."
+-- Haruki Murakami
