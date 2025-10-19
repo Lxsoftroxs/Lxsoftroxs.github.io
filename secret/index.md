@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: post
 title: Secret Section
 permalink: /secret/
 ---
