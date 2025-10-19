@@ -15,3 +15,7 @@ permalink: /quotes/
 
 “In the moment when I truly understand my enemy, understand him well enough to defeat him, then in that very moment I also love him. I think it’s impossible to really understand somebody, what they want, what they believe, and not love them the way they love themselves.”                  
 — Orson Scott Card
+
+"I am the beast I worship" 
+- Death Grips
+
