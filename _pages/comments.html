@@ -1,0 +1,357 @@
+---
+layout: default
+title: "Comments"
+permalink: /comments/
+---
+
+<h1>Community Comments</h1>
+
+<div class="comments-page">
+  <p>Share your thoughts, feedback, or messages with the community! All submissions are reviewed and sanitized for safety before being posted.</p>
+
+  <div class="comment-form-container">
+    <h2>Submit a Comment</h2>
+
+    <form id="comment-form">
+      <div class="form-group">
+        <label for="comment-name">Your Name (optional):</label>
+        <input
+          type="text"
+          id="comment-name"
+          name="name"
+          maxlength="50"
+          placeholder="Anonymous"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="comment-text">Your Message: <span class="required">*</span></label>
+        <textarea
+          id="comment-text"
+          name="comment"
+          required
+          maxlength="1000"
+          rows="6"
+          placeholder="Write your message here... (max 1000 characters)"
+        ></textarea>
+        <div class="char-count">
+          <span id="char-count">0</span>/1000 characters
+        </div>
+      </div>
+
+      <!-- Honeypot field for bot protection -->
+      <input type="text" name="website" style="display:none;" tabindex="-1" autocomplete="off" />
+
+      <button type="submit" id="submit-button">Submit Comment</button>
+      <div id="form-message" class="form-message"></div>
+    </form>
+
+    <div class="security-notice">
+      <h3>🔒 Security Notice</h3>
+      <p>For your safety and ours:</p>
+      <ul>
+        <li>All comments are sanitized to remove any code or scripts</li>
+        <li>Comments are manually reviewed before appearing on the site</li>
+        <li>HTML, JavaScript, and other code will be displayed as plain text only</li>
+        <li>Please keep comments respectful and appropriate</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="comments-display">
+    <h2>Recent Comments</h2>
+    {% if site.comments.size > 0 %}
+      <div class="comments-list">
+        {% assign sorted_comments = site.comments | sort: 'date' | reverse %}
+        {% for comment in sorted_comments limit:20 %}
+          <div class="comment-item">
+            <div class="comment-header">
+              <span class="comment-author">{{ comment.author | default: "Anonymous" }}</span>
+              <span class="comment-date">{{ comment.date | date: "%B %d, %Y" }}</span>
+            </div>
+            <div class="comment-text">
+              <!-- Content is already sanitized when created -->
+              {{ comment.content | escape }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="no-comments">No comments yet. Be the first to share your thoughts!</p>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.comments-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.comment-form-container {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 3rem;
+  border: 1px solid rgba(109, 221, 255, 0.2);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #6df;
+}
+
+.required {
+  color: #ff6b6b;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(109, 221, 255, 0.3);
+  border-radius: 4px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 0.875rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+#submit-button {
+  background: #6df;
+  color: #111;
+  border: none;
+  padding: 0.75rem 2rem;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#submit-button:hover {
+  background: #5ce;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(109, 221, 255, 0.3);
+}
+
+#submit-button:disabled {
+  background: #555;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.form-message {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 4px;
+  display: none;
+}
+
+.form-message.success {
+  display: block;
+  background: rgba(72, 187, 120, 0.2);
+  border: 1px solid #48bb78;
+  color: #48bb78;
+}
+
+.form-message.error {
+  display: block;
+  background: rgba(245, 101, 101, 0.2);
+  border: 1px solid #f56565;
+  color: #f56565;
+}
+
+.security-notice {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(109, 221, 255, 0.1);
+  border-left: 3px solid #6df;
+  border-radius: 4px;
+}
+
+.security-notice h3 {
+  margin-top: 0;
+  color: #6df;
+}
+
+.security-notice ul {
+  margin-bottom: 0;
+}
+
+.comments-display {
+  margin-top: 3rem;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.comment-item {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(109, 221, 255, 0.2);
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(109, 221, 255, 0.2);
+}
+
+.comment-author {
+  color: #6df;
+  font-weight: bold;
+}
+
+.comment-date {
+  color: #888;
+  font-size: 0.875rem;
+}
+
+.comment-text {
+  color: #ddd;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.no-comments {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 2rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('comment-form');
+  const submitButton = document.getElementById('submit-button');
+  const formMessage = document.getElementById('form-message');
+  const commentText = document.getElementById('comment-text');
+  const charCount = document.getElementById('char-count');
+
+  // Character counter
+  commentText.addEventListener('input', function() {
+    const length = this.value.length;
+    charCount.textContent = length;
+
+    if (length >= 1000) {
+      charCount.style.color = '#ff6b6b';
+    } else if (length >= 800) {
+      charCount.style.color = '#ffa500';
+    } else {
+      charCount.style.color = '#888';
+    }
+  });
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Check honeypot
+    const honeypot = form.querySelector('input[name="website"]');
+    if (honeypot && honeypot.value) {
+      // Bot detected, silently fail
+      showMessage('Thank you for your submission!', 'success');
+      form.reset();
+      return;
+    }
+
+    const name = document.getElementById('comment-name').value.trim();
+    const comment = commentText.value.trim();
+
+    if (!comment) {
+      showMessage('Please enter a message.', 'error');
+      return;
+    }
+
+    // Basic sanitization on client side (backend must also sanitize!)
+    const sanitizedName = sanitizeInput(name || 'Anonymous');
+    const sanitizedComment = sanitizeInput(comment);
+
+    // Disable submit button
+    submitButton.disabled = true;
+    submitButton.textContent = 'Submitting...';
+    formMessage.style.display = 'none';
+
+    try {
+      // Submit to API endpoint
+      const response = await fetch('https://subscriber-api-lolroxs.vercel.app/api/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: sanitizedName,
+          comment: sanitizedComment,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        showMessage('Thank you! Your comment has been submitted and will appear after review.', 'success');
+        form.reset();
+        charCount.textContent = '0';
+      } else {
+        throw new Error('Submission failed');
+      }
+    } catch (error) {
+      showMessage('Sorry, there was an error submitting your comment. Please try again later.', 'error');
+      console.error('Submission error:', error);
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Submit Comment';
+    }
+  });
+
+  function sanitizeInput(str) {
+    // Remove any HTML tags and dangerous characters
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+      .substring(0, 1000); // Enforce max length
+  }
+
+  function showMessage(message, type) {
+    formMessage.textContent = message;
+    formMessage.className = 'form-message ' + type;
+    formMessage.style.display = 'block';
+
+    // Auto-hide success messages after 5 seconds
+    if (type === 'success') {
+      setTimeout(() => {
+        formMessage.style.display = 'none';
+      }, 5000);
+    }
+  }
+});
+</script>

@@ -74,18 +74,21 @@ jobs:
         shell: bash
         env:
           INPUT_EMAILS: ${{ github.event.inputs.emails_csv }}
+          SUBSCRIBER_EMAILS: ${{ secrets.SUBSCRIBER_EMAILS }}
         run: |
           set -e
           if [ -n "${INPUT_EMAILS:-}" ]; then
             echo "EMAIL_LIST=$INPUT_EMAILS" >> "$GITHUB_ENV"
             echo "source=override" >> "$GITHUB_OUTPUT"
-          elif [ -f subscribers.json ]; then
-            emails=$(jq -r '.[]' subscribers.json | paste -sd, -)
+          elif [ -n "${SUBSCRIBER_EMAILS:-}" ]; then
+            # Parse JSON array from GitHub Secret
+            emails=$(echo "${SUBSCRIBER_EMAILS}" | jq -r '.[]' | paste -sd, -)
             echo "EMAIL_LIST=$emails" >> "$GITHUB_ENV"
-            echo "source=subscribers.json" >> "$GITHUB_OUTPUT"
+            echo "source=github-secret" >> "$GITHUB_OUTPUT"
           else
             echo "EMAIL_LIST=" >> "$GITHUB_ENV"
             echo "source=none" >> "$GITHUB_OUTPUT"
+            echo "::warning::No subscriber emails found. Please set SUBSCRIBER_EMAILS secret."
           fi
 
       - name: Detect target post (push vs manual)
