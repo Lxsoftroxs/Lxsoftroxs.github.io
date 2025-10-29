@@ -11,16 +11,16 @@ jobs:
 
     steps:
     - name: Checkout the repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
     - name: Generate blog post file
       run: |
-        python create_blog_post.py
+        python scripts/create_blog_post.py
         
     - name: Debug remotes
       run: git remote -v
@@ -33,10 +33,16 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add _posts/
-        git commit -m "New blog post added automatically"
 
-        #Manually override the remote URL to use your PAT
-        git remote set-url origin https://x-access-token:${TOKEN}@github.com/${REPO}.git
-        git push origin HEAD:main
+        # Only commit if there are changes
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "New blog post added automatically"
+
+          # Manually override the remote URL to use your PAT
+          git remote set-url origin https://x-access-token:${TOKEN}@github.com/${REPO}.git
+          git push origin HEAD:main
+        fi
 
 

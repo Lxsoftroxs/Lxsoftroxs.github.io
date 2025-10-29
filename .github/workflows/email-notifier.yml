@@ -264,6 +264,8 @@ jobs:
           CUSTOM_MESSAGE: ${{ env.CUSTOM_MESSAGE }}
         run: |
           set -e
+          # Convert comma-separated emails to space-separated for msmtp
+          EMAIL_ARGS=$(echo "${EMAIL_LIST}" | tr ',' ' ')
           SUBJECT="${SUBJECT_PREFIX}: ${POST_TITLE}"
           {
             echo "Subject: ${SUBJECT}"
@@ -274,4 +276,4 @@ jobs:
               echo
               echo "${CUSTOM_MESSAGE}"
             fi
-          } | msmtp -a default "${EMAIL_LIST}"
+          } | msmtp -a default $EMAIL_ARGS
