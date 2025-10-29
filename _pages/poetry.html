@@ -6,10 +6,10 @@ permalink: /poetry/
 
 <h1>Poetry Collection</h1>
 
-<ul>
+<ul class="poetry-list">
   {% for poem in site.poetry %}
     <li>
-      <a href="{{ poem.url }}">{{ poem.title }}</a> - {{ poem.date | date: "%B %-d, %Y" }}
+      <a href="{{ poem.url }}">{{ poem.title }}</a><span class="date">{{ poem.date | date: "%B %-d, %Y" }}</span>
     </li>
   {% endfor %}
 </ul>
