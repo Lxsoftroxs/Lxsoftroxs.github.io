@@ -14,7 +14,9 @@ post_num = len(existing) + 1
 
 # Number to word
 ordinals = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh",
-            "eighth", "ninth", "tenth", "eleventh", "twelfth", "thirteenth"]
+            "eighth", "ninth", "tenth", "eleventh", "twelfth", "thirteenth",
+            "fourteenth", "fifteenth", "sixteenth", "seventeenth", "eighteenth",
+            "nineteenth", "twentieth"]
 ordinal_word = ordinals[post_num - 1] if post_num <= len(ordinals) else f"{post_num}th"
 
 filename = f"{date_str}-{ordinal_word}-post.md"
