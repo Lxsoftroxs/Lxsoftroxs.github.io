@@ -1,39 +1,100 @@
 #!/usr/bin/env python3
-import os, yaml, re
+"""
+Diary Photo Updater
+Renames diary photos sequentially and generates YAML metadata.
+"""
+import os
+import sys
+import yaml
+from pathlib import Path
 
 DEST = "assets/diary"
 DATA = "_data/diary_photos.yml"
+SUPPORTED_FORMATS = (".jpg", ".jpeg", ".png", ".webp")
 
-# read existing entries if any
-if os.path.exists(DATA):
-    with open(DATA) as f:
-        photos = yaml.safe_load(f) or []
-else:
-    photos = []
+def main():
+    """Main execution function with error handling."""
+    try:
+        # Validate directory exists
+        if not os.path.isdir(DEST):
+            print(f"Error: Directory '{DEST}' does not exist.", file=sys.stderr)
+            return 1
 
-# normalize existing IDs
-ids = {p["id"] for p in photos}
+        # Read existing entries if any
+        existing_photos = []
+        if os.path.exists(DATA):
+            try:
+                with open(DATA, 'r', encoding='utf-8') as f:
+                    existing_photos = yaml.safe_load(f) or []
+                print(f"Loaded {len(existing_photos)} existing entries from {DATA}")
+            except yaml.YAMLError as e:
+                print(f"Warning: Could not parse {DATA}: {e}", file=sys.stderr)
+            except Exception as e:
+                print(f"Warning: Could not read {DATA}: {e}", file=sys.stderr)
 
-# collect jpg/png files
-files = [f for f in os.listdir(DEST)
-         if f.lower().endswith((".jpg",".jpeg",".png"))]
+        # Collect image files (excluding WebP originals, they're generated)
+        files = []
+        for f in os.listdir(DEST):
+            if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                files.append(f)
 
-# rename and rebuild list
-photos = []
-counter = 1
-for f in sorted(files):
-    newname = f"photo_{counter:03d}{os.path.splitext(f)[1].lower()}"
-    if f != newname:
-        os.rename(os.path.join(DEST,f), os.path.join(DEST,newname))
-    photos.append({
-        "id": f"photo_{counter:03d}",
-        "src": f"/{DEST}/{newname}",
-        "caption": f"Untitled {counter:03d}"
-    })
-    counter += 1
+        if not files:
+            print(f"No image files found in {DEST}")
+            return 0
 
-os.makedirs(os.path.dirname(DATA), exist_ok=True)
-with open(DATA,"w") as f:
-    yaml.safe_dump(photos, f, sort_keys=False, width=80)
+        print(f"Found {len(files)} image files to process")
 
-print(f"Updated {DATA} with {len(photos)} photos.")
+        # Sort files to maintain consistent ordering
+        files.sort()
+
+        # Rename files and build metadata list
+        photos = []
+        counter = 1
+        renamed_count = 0
+
+        for f in files:
+            ext = os.path.splitext(f)[1].lower()
+            newname = f"photo_{counter:03d}{ext}"
+            old_path = os.path.join(DEST, f)
+            new_path = os.path.join(DEST, newname)
+
+            # Rename if needed
+            if f != newname:
+                try:
+                    os.rename(old_path, new_path)
+                    renamed_count += 1
+                    print(f"  Renamed: {f} -> {newname}")
+                except OSError as e:
+                    print(f"  Error renaming {f}: {e}", file=sys.stderr)
+                    continue
+
+            # Create metadata entry
+            photos.append({
+                "id": f"photo_{counter:03d}",
+                "src": f"/{DEST}/{newname}",
+                "caption": f"Untitled {counter:03d}"
+            })
+            counter += 1
+
+        # Ensure data directory exists
+        data_dir = os.path.dirname(DATA)
+        if data_dir:
+            os.makedirs(data_dir, exist_ok=True)
+
+        # Write YAML file
+        try:
+            with open(DATA, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(photos, f, sort_keys=False, width=80, allow_unicode=True)
+            print(f"\n✓ Successfully updated {DATA} with {len(photos)} photos")
+            print(f"✓ Renamed {renamed_count} files")
+            return 0
+        except Exception as e:
+            print(f"Error writing {DATA}: {e}", file=sys.stderr)
+            return 1
+
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())

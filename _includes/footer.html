@@ -1,9 +1,13 @@
 <!-- _includes/footer.html -->
 <footer class="site-footer">
   <form id="subscribe-form" novalidate>
-    <input type="email" id="subscriber-email" placeholder="Enter your email" required>
+    <input type="email" id="subscriber-email" placeholder="Enter your email" required
+           pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+           maxlength="254"
+           autocomplete="email"
+           aria-label="Email address for subscription">
     <!-- Honeypot for bots -->
-    <input type="text" id="website" name="website" style="display:none">
+    <input type="text" id="website" name="website" style="display:none" tabindex="-1" autocomplete="off">
     <button type="submit">Subscribe</button>
   </form>
   <div id="subscribe-message" role="status" aria-live="polite"></div>
@@ -17,38 +21,112 @@
       const msg   = document.getElementById('subscribe-message');
       const btn   = form.querySelector('button');
 
+      // Rate limiting: store submission timestamps
+      const RATE_LIMIT_KEY = 'sub_attempts';
+      const RATE_LIMIT_WINDOW = 60000; // 1 minute
+      const MAX_ATTEMPTS = 3;
+
+      // Enhanced email validation
+      function isValidEmail(email) {
+        const re = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+        return re.test(email) && email.length <= 254;
+      }
+
+      // Rate limiting check
+      function checkRateLimit() {
+        try {
+          const attempts = JSON.parse(localStorage.getItem(RATE_LIMIT_KEY) || '[]');
+          const now = Date.now();
+          // Clean old attempts
+          const recentAttempts = attempts.filter(t => now - t < RATE_LIMIT_WINDOW);
+
+          if (recentAttempts.length >= MAX_ATTEMPTS) {
+            const oldestAttempt = Math.min(...recentAttempts);
+            const waitTime = Math.ceil((RATE_LIMIT_WINDOW - (now - oldestAttempt)) / 1000);
+            return { allowed: false, waitTime };
+          }
+
+          // Add current attempt
+          recentAttempts.push(now);
+          localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(recentAttempts));
+          return { allowed: true };
+        } catch (e) {
+          // If localStorage fails, allow the request
+          return { allowed: true };
+        }
+      }
+
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = (input.value || '').trim().toLowerCase();
 
-        if (honey && honey.value) return; // bot
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        // Bot check (honeypot)
+        if (honey && honey.value) {
+          console.warn('Honeypot triggered');
+          return;
+        }
+
+        // Email validation
+        if (!isValidEmail(email)) {
           msg.textContent = 'Please enter a valid email address.';
+          msg.style.color = '#e63946';
+          return;
+        }
+
+        // Rate limiting
+        const rateCheck = checkRateLimit();
+        if (!rateCheck.allowed) {
+          msg.textContent = `Too many attempts. Please wait ${rateCheck.waitTime} seconds.`;
+          msg.style.color = '#e63946';
           return;
         }
 
         btn.disabled = true;
         msg.textContent = 'Subscribing...';
+        msg.style.color = '';
 
         try {
+          // Timeout for fetch request
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
           const res = await fetch('https://subscriber-api-lolroxs.vercel.app/api/subscribe', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
             body: JSON.stringify({ email }),
             mode: 'cors',
-            credentials: 'omit'
+            credentials: 'omit',
+            signal: controller.signal
           });
 
+          clearTimeout(timeoutId);
+
           let data = null;
-          try { data = await res.json(); } catch (_) {}
+          try {
+            data = await res.json();
+          } catch (e) {
+            console.warn('Failed to parse response as JSON:', e);
+          }
 
-          if (!res.ok) throw new Error((data && data.message) || `HTTP ${res.status}`);
+          if (!res.ok) {
+            throw new Error((data && data.message) || `Server error (${res.status})`);
+          }
 
-          msg.textContent = (data && data.message) || 'Subscribed!';
+          msg.textContent = (data && data.message) || 'Successfully subscribed!';
+          msg.style.color = '#6df';
           input.value = '';
         } catch (err) {
-          console.error(err);
-          msg.textContent = 'Subscription failed. Please try again later.';
+          console.error('Subscription error:', err);
+
+          if (err.name === 'AbortError') {
+            msg.textContent = 'Request timeout. Please try again.';
+          } else {
+            msg.textContent = 'Subscription failed. Please try again later.';
+          }
+          msg.style.color = '#e63946';
         } finally {
           btn.disabled = false;
         }

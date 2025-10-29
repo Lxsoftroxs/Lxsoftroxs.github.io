@@ -11,7 +11,14 @@ permalink: /gallery/
   {% for image in gallery_images %}
     {% if image.path contains '.jpg' or image.path contains '.png' or image.path contains '.gif' %}
       <figure>
-        <img src="{{ image.path | relative_url }}" alt="{{ image.name }}">
+        {% if image.path contains '.jpg' or image.path contains '.png' %}
+        <picture>
+          <source srcset="{{ image.path | replace: '.jpg', '.webp' | replace: '.jpeg', '.webp' | replace: '.png', '.webp' | relative_url }}" type="image/webp">
+          <img src="{{ image.path | relative_url }}" alt="{{ image.name }}" loading="lazy" decoding="async">
+        </picture>
+        {% else %}
+          <img src="{{ image.path | relative_url }}" alt="{{ image.name }}" loading="lazy" decoding="async">
+        {% endif %}
         <figcaption>{{ image.name }}</figcaption>
       </figure>
     {% endif %}

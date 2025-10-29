@@ -44,12 +44,18 @@ permalink: /diary/
   }
 
   /* image scaling fix */
+  .polaroid picture {
+    display: block;
+    width: 100%;
+  }
+
   .polaroid img {
     width: 100%;
     height: auto;
     max-height: 320px; /* limit vertical size */
     object-fit: cover;
     border-radius: 4px;
+    display: block;
   }
 
   /* caption */
@@ -92,7 +98,10 @@ permalink: /diary/
     {% assign photos = site.data.diary_photos %}
     {% for p in photos %}
     <figure class="polaroid" data-id="{{ p.id }}">
-      <img src="{{ p.src }}" alt="{{ p.caption }}">
+      <picture>
+        <source srcset="{{ p.src | replace: '.jpg', '.webp' | replace: '.jpeg', '.webp' | replace: '.png', '.webp' }}" type="image/webp">
+        <img src="{{ p.src }}" alt="{{ p.caption }}" loading="lazy" decoding="async">
+      </picture>
       <figcaption>{{ p.caption }}</figcaption>
       <button class="like" type="button">❤ <span class="count">0</span></button>
     </figure>

@@ -1,0 +1,98 @@
+---
+layout: default
+title: "404 - Page Not Found"
+permalink: /404.html
+---
+
+<style>
+  .error-page {
+    text-align: center;
+    padding: 4rem 1rem;
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .error-code {
+    font-size: 8rem;
+    font-weight: bold;
+    color: #6df;
+    text-shadow: 0 0 20px #6df;
+    margin: 0;
+    line-height: 1;
+  }
+
+  .error-message {
+    font-size: 1.5rem;
+    margin: 1rem 0 2rem;
+    color: #ddd;
+  }
+
+  .error-description {
+    font-size: 1rem;
+    color: #999;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+
+  .error-links {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  .error-link {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: 2px solid #6df;
+    color: #6df;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+  }
+
+  .error-link:hover {
+    background: #6df;
+    color: #111;
+    box-shadow: 0 0 20px #6df;
+  }
+
+  .glitch {
+    animation: glitch 1s infinite;
+  }
+
+  @keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+  }
+</style>
+
+<div class="error-page">
+  <h1 class="error-code glitch">404</h1>
+  <p class="error-message">Page Not Found</p>
+  <p class="error-description">
+    The page you're looking for doesn't exist or has been moved.
+    It might have been deleted, or you may have mistyped the URL.
+  </p>
+
+  <div class="error-links">
+    <a href="/" class="error-link">← Home</a>
+    <a href="/diary/" class="error-link">Diary</a>
+    <a href="/poetry/" class="error-link">Poetry</a>
+    <a href="/projects/" class="error-link">Projects</a>
+  </div>
+</div>
+
+<script>
+  // Track 404 errors in console for debugging
+  console.warn('404 Error: Page not found -', window.location.pathname);
+</script>

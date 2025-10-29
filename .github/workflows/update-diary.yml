@@ -28,14 +28,33 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+          cache: 'pip'
 
       - name: Install PyYAML
         run: pip install pyyaml
 
-      # Optional: image optimization before renaming
-      # - name: Optimize images (ImageMagick)
-      #   run: sudo apt-get update && sudo apt-get install -y imagemagick && \
-      #        mogrify -resize 1600x1600\> -quality 85 assets/diary/*.{jpg,jpeg,png}
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick webp
+
+      - name: Optimize images (reduce size, keep quality)
+        run: |
+          # Optimize JPG/PNG images (max 1920px, quality 85, progressive JPEGs)
+          for img in assets/diary/*.{jpg,jpeg,JPG,JPEG}; do
+            [ -f "$img" ] || continue
+            mogrify -resize 1920x1920\> -quality 85 -interlace Plane -strip "$img"
+          done
+          for img in assets/diary/*.{png,PNG}; do
+            [ -f "$img" ] || continue
+            mogrify -resize 1920x1920\> -strip "$img"
+          done
+
+          # Generate WebP versions for modern browsers
+          for img in assets/diary/*.{jpg,jpeg,png,JPG,JPEG,PNG}; do
+            [ -f "$img" ] || continue
+            cwebp -q 85 "$img" -o "${img%.*}.webp" 2>/dev/null || true
+          done
 
       - name: Run diary updater
         run: python .github/scripts/update_diary.py

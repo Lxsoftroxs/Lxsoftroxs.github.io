@@ -3,6 +3,8 @@ title: ""
 description: "A blog styled like Lainchan with a dark, neon vibe."
 baseurl: ""          # leave empty if the site is at the root URL
 url: "https://Lxsoftroxs.github.io"  # change to your site URL
+
+# Collections configuration
 collections:
   journal:
     output: true
@@ -14,3 +16,53 @@ collections:
   pages:
     output: true
     permalink: /:path/
+
+# Pagination configuration
+paginate: 10
+paginate_path: "/blog/page:num/"
+
+# Performance optimizations
+sass:
+  style: compressed
+  sourcemap: never
+
+# Build settings
+exclude:
+  - scripts/
+  - .github/
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - LICENSE
+  - node_modules/
+  - vendor/
+
+# Incremental build for faster regeneration
+incremental: true
+
+# Disable custom plugins for GitHub Pages compatibility
+plugins:
+  - jekyll-paginate
+  - jekyll-sitemap
+
+# Markdown configuration
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+# Defaults for front matter
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
