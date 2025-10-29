@@ -251,37 +251,37 @@ a:hover {
 
 /* Poetry and Projects list styling */
 .poetry-list, .projects-list {
-  list-style: disc;
-  padding-left: 40px;
+  list-style: none;
+  padding-left: 0;
   text-align: left;
   max-width: 700px;
   margin: 20px auto;
 }
 
 .poetry-list li, .projects-list li {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   line-height: 1.8;
 }
 
 .poetry-list a, .projects-list a {
-  font-size: 0.95em;
+  font-size: 1.2em;
   color: #6df;
 }
 
 .poetry-list .date {
-  font-size: 0.85em;
+  font-size: 1em;
   color: #999;
-  margin-left: 8px;
+  margin-left: 10px;
 }
 
 .projects-list p {
-  margin: 5px 0 0 0;
-  font-size: 0.9em;
+  margin: 8px 0 0 0;
+  font-size: 1em;
   color: #bbb;
 }
 
 .projects-list strong {
-  font-size: 0.95em;
+  font-size: 1.2em;
 }
 
 /* Contribute page styling */
@@ -414,6 +414,41 @@ a:hover {
 .method ol li {
   margin-bottom: 10px;
   color: #bbb;
+}
+
+.method ul {
+  list-style: disc;
+  padding-left: 25px;
+  margin-top: 10px;
+}
+
+.method ul li {
+  margin-bottom: 5px;
+  color: #bbb;
+}
+
+.contribute-page code {
+  background-color: #1a1a1a;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #6df;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.contribute-page pre {
+  background-color: #1a1a1a;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.contribute-page pre code {
+  background-color: transparent;
+  padding: 0;
+  color: #ddd;
 }
 
 
