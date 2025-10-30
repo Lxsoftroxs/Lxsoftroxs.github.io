@@ -35,6 +35,30 @@ permalink: /projects/tetris/
       </div>
     </details>
 
+    <div id="mobile-controls" style="margin-top:12px;padding:12px;background:#1a1a1a;border:1px solid #333;border-radius:8px">
+      <div style="font:600 14px system-ui;margin-bottom:8px;text-align:center">Mobile Controls</div>
+
+      <!-- Movement Controls -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+        <button id="btn-rotate-ccw" style="padding:12px;background:#3f51b5;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">↺ CCW</button>
+        <button id="btn-rotate-cw" style="padding:12px;background:#3f51b5;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">↻ CW</button>
+        <button id="btn-hold" style="padding:12px;background:#fb8c00;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">Hold</button>
+      </div>
+
+      <!-- Directional Controls -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+        <button id="btn-left" style="padding:16px;background:#43a047;border:none;border-radius:6px;color:#fff;font:600 16px system-ui;cursor:pointer;touch-action:manipulation">←</button>
+        <button id="btn-down" style="padding:16px;background:#43a047;border:none;border-radius:6px;color:#fff;font:600 16px system-ui;cursor:pointer;touch-action:manipulation">↓</button>
+        <button id="btn-right" style="padding:16px;background:#43a047;border:none;border-radius:6px;color:#fff;font:600 16px system-ui;cursor:pointer;touch-action:manipulation">→</button>
+      </div>
+
+      <!-- Action Controls -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+        <button id="btn-hard-drop" style="padding:12px;background:#e91e63;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">Hard Drop</button>
+        <button id="btn-pause" style="padding:12px;background:#ef5350;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">Pause</button>
+      </div>
+    </div>
+
     <div style="margin-top:14px">
       <div style="font:600 14px system-ui;margin:4px 0">Leaderboard (Top 10)</div>
       <ol id="lb" style="margin:6px 0 0;padding-left:22px;font:14px/1.4 system-ui"></ol>
@@ -230,6 +254,40 @@ permalink: /projects/tetris/
     else if (e.code==="ArrowUp" || e.code==="KeyX"){ rot(1); }
     else if (e.code==="KeyZ"){ rot(-1); }
     else if (e.code==="KeyC" || e.code==="ShiftLeft" || e.code==="ShiftRight"){ hold(); }
+  });
+
+  // --- Mobile Button Controls ---
+  document.getElementById("btn-left")?.addEventListener("click", ()=>{
+    if (paused || clearing || over || !piece) return;
+    if(!collide(piece.x-1,piece.y,piece.m)) piece.x--;
+  });
+  document.getElementById("btn-right")?.addEventListener("click", ()=>{
+    if (paused || clearing || over || !piece) return;
+    if(!collide(piece.x+1,piece.y,piece.m)) piece.x++;
+  });
+  document.getElementById("btn-down")?.addEventListener("click", ()=>{
+    if (paused || clearing || over) return;
+    softDrop();
+  });
+  document.getElementById("btn-hard-drop")?.addEventListener("click", ()=>{
+    if (paused || clearing || over) return;
+    hardDrop();
+  });
+  document.getElementById("btn-rotate-cw")?.addEventListener("click", ()=>{
+    if (paused || clearing || over || !piece) return;
+    rot(1);
+  });
+  document.getElementById("btn-rotate-ccw")?.addEventListener("click", ()=>{
+    if (paused || clearing || over || !piece) return;
+    rot(-1);
+  });
+  document.getElementById("btn-hold")?.addEventListener("click", ()=>{
+    if (paused || clearing || over) return;
+    hold();
+  });
+  document.getElementById("btn-pause")?.addEventListener("click", ()=>{
+    if (over) return;
+    paused=!paused;
   });
 
   // --- Leaderboard (global) ---
