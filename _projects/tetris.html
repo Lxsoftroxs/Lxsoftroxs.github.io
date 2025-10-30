@@ -88,6 +88,11 @@ permalink: /projects/tetris/
     font-size: 1.2rem;
   }
 
+  .mobile-btn.fullscreen {
+    background: #7e57c2;
+    border-color: #5e35b1;
+  }
+
   /* Mobile controls layout */
   .mobile-controls-wrapper {
     display: none;
@@ -242,6 +247,7 @@ permalink: /projects/tetris/
         <button id="btn-rotate-cw-legacy" style="padding:12px;background:#3f51b5;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">↻ CW</button>
         <button id="btn-hold-legacy" style="padding:12px;background:#fb8c00;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">Hold</button>
       </div>
+      <button id="btn-fullscreen-legacy" style="width:100%;padding:12px;background:#7e57c2;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">⛶ Fullscreen</button>
     </div>
 
     <!-- New mobile controls (shown only on mobile) -->
@@ -266,6 +272,7 @@ permalink: /projects/tetris/
           <button class="mobile-btn primary" id="btn-rotate-cw-2">Rotate ⟳</button>
           <button class="mobile-btn action" id="btn-hard-drop">HARD DROP</button>
           <button class="mobile-btn" id="btn-pause">PAUSE</button>
+          <button class="mobile-btn fullscreen" id="btn-fullscreen">⛶ FULL</button>
         </div>
       </div>
     </div>
@@ -579,6 +586,65 @@ permalink: /projects/tetris/
     if (paused || clearing || over) return;
     hold();
   });
+
+  // --- Fullscreen ---
+  const wrapEl = document.getElementById('tetris-wrap');
+  const fsBtn = document.getElementById('btn-fullscreen');
+  const fsBtnLegacy = document.getElementById('btn-fullscreen-legacy');
+
+  function updateFullscreenButtons() {
+    const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    const text = isFullscreen ? '⛶ EXIT' : '⛶ FULL';
+    const textLegacy = isFullscreen ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
+    if (fsBtn) fsBtn.textContent = text;
+    if (fsBtnLegacy) fsBtnLegacy.textContent = textLegacy;
+  }
+
+  function toggleFullscreen() {
+    const elem = wrapEl.parentElement || document.documentElement;
+
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
+      // Enter fullscreen
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.mozRequestFullScreen) {
+        elem.mozRequestFullScreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+    } else {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    }
+  }
+
+  // Listen for fullscreen changes (including ESC key)
+  document.addEventListener('fullscreenchange', () => {
+    updateFullscreenButtons();
+    setTimeout(resize, 100); // Resize canvas after fullscreen transition
+  });
+  document.addEventListener('webkitfullscreenchange', () => {
+    updateFullscreenButtons();
+    setTimeout(resize, 100);
+  });
+  document.addEventListener('mozfullscreenchange', () => {
+    updateFullscreenButtons();
+    setTimeout(resize, 100);
+  });
+
+  // Bind fullscreen buttons
+  bindSingle(fsBtn, toggleFullscreen);
+  bindSingle(fsBtnLegacy, toggleFullscreen);
 
   // --- Leaderboard (global) ---
   function renderLeaderboard(list){
