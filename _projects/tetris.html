@@ -206,6 +206,67 @@ permalink: /projects/tetris/
       display: none;
     }
   }
+
+  /* Fullscreen mode styles */
+  #tetris-wrap:fullscreen .mobile-controls-wrapper,
+  #tetris-wrap:-webkit-full-screen .mobile-controls-wrapper,
+  #tetris-wrap:-moz-full-screen .mobile-controls-wrapper,
+  #tetris-wrap:-ms-fullscreen .mobile-controls-wrapper {
+    display: block;
+  }
+
+  /* Fullscreen layout for mobile */
+  @media (max-width: 768px) {
+    #tetris-wrap:fullscreen,
+    #tetris-wrap:-webkit-full-screen,
+    #tetris-wrap:-moz-full-screen,
+    #tetris-wrap:-ms-fullscreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+      padding: 10px;
+      background: var(--bg-dark);
+    }
+
+    #tetris-wrap:fullscreen .mobile-controls-wrapper,
+    #tetris-wrap:-webkit-full-screen .mobile-controls-wrapper,
+    #tetris-wrap:-moz-full-screen .mobile-controls-wrapper,
+    #tetris-wrap:-ms-fullscreen .mobile-controls-wrapper {
+      display: block !important;
+      margin-top: 8px;
+    }
+  }
+
+  /* Fullscreen landscape optimization for mobile */
+  @media (max-width: 768px) and (orientation: landscape) {
+    #tetris-wrap:fullscreen,
+    #tetris-wrap:-webkit-full-screen,
+    #tetris-wrap:-moz-full-screen,
+    #tetris-wrap:-ms-fullscreen {
+      flex-direction: row;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    #tetris-wrap:fullscreen #tetris,
+    #tetris-wrap:-webkit-full-screen #tetris,
+    #tetris-wrap:-moz-full-screen #tetris,
+    #tetris-wrap:-ms-fullscreen #tetris {
+      max-width: 45vw;
+      max-height: 90vh;
+    }
+
+    #tetris-wrap:fullscreen .mobile-controls-wrapper,
+    #tetris-wrap:-webkit-full-screen .mobile-controls-wrapper,
+    #tetris-wrap:-moz-full-screen .mobile-controls-wrapper,
+    #tetris-wrap:-ms-fullscreen .mobile-controls-wrapper {
+      max-width: 45vw;
+      margin-top: 0;
+    }
+  }
 </style>
 
 <div id="tetris-wrap">
@@ -601,7 +662,7 @@ permalink: /projects/tetris/
   }
 
   function toggleFullscreen() {
-    const elem = wrapEl.parentElement || document.documentElement;
+    const elem = wrapEl;
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
       // Enter fullscreen
