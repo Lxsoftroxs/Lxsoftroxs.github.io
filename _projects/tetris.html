@@ -4,8 +4,207 @@ title: "Tetris"
 permalink: /projects/tetris/
 ---
 
-<div id="tetris-wrap" style="display:flex;gap:16px;justify-content:center;align-items:flex-start;flex-wrap:wrap">
-  <canvas id="tetris" style="background:#111;border:1px solid #333;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.5)"></canvas>
+<style>
+  :root {
+    /* Mobile controls configuration */
+    --das: 130ms;
+    --arr: 45ms;
+    --btn-pad: 16px;
+    --gap: 10px;
+    --accent: #3f51b5;
+    --bg-dark: #0b0b0b;
+    --fg-light: #eaeaea;
+    --surface: #1b1b1b;
+  }
+
+  /* Prevent overscroll on mobile */
+  body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #tetris-wrap {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  #tetris {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    touch-action: none; /* Prevent scroll on canvas */
+  }
+
+  /* Mobile-specific styles */
+  .mobile-btn {
+    background: var(--surface);
+    border: 1px solid #333;
+    border-radius: 14px;
+    padding: var(--btn-pad);
+    text-align: center;
+    font-size: 1.05rem;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    color: var(--fg-light);
+    cursor: pointer;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+  }
+
+  .mobile-btn:active {
+    transform: translateY(1px);
+  }
+
+  .mobile-btn.primary {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(63, 81, 181, 0.25) inset;
+    background: rgba(63, 81, 181, 0.15);
+  }
+
+  .mobile-btn.action {
+    background: #e91e63;
+    border-color: #c2185b;
+    font-weight: 700;
+  }
+
+  .mobile-btn.hold {
+    background: #fb8c00;
+    border-color: #e65100;
+  }
+
+  .mobile-btn.move {
+    background: #43a047;
+    border-color: #2e7d32;
+    font-size: 1.2rem;
+  }
+
+  /* Mobile controls layout */
+  .mobile-controls-wrapper {
+    display: none;
+    margin-top: 12px;
+    max-width: 560px;
+    width: 100%;
+  }
+
+  .mobile-controls-row {
+    display: grid;
+    gap: var(--gap);
+    margin-bottom: var(--gap);
+  }
+
+  .mobile-controls-row.top {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .mobile-controls-row.bottom {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap);
+  }
+
+  /* D-pad layout */
+  .dpad {
+    display: grid;
+    grid-template-areas:
+      ". up ."
+      "left down right";
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--gap);
+  }
+
+  .dpad .btn-up { grid-area: up; }
+  .dpad .btn-left { grid-area: left; }
+  .dpad .btn-right { grid-area: right; }
+  .dpad .btn-down { grid-area: down; }
+
+  /* Action buttons */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--gap);
+  }
+
+  /* Show mobile controls only on small screens */
+  @media (max-width: 768px) {
+    .mobile-controls-wrapper {
+      display: block;
+    }
+
+    #tetris-wrap {
+      flex-direction: column;
+      align-items: center;
+      padding-left: max(10px, env(safe-area-inset-left));
+      padding-right: max(10px, env(safe-area-inset-right));
+    }
+
+    #mobile-controls-legacy {
+      display: none;
+    }
+
+    #tetris {
+      max-width: min(100vw - 20px, 560px);
+      width: 100%;
+    }
+  }
+
+  /* Landscape optimization for mobile */
+  @media (orientation: landscape) and (max-height: 600px) {
+    #tetris-wrap {
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .mobile-controls-wrapper {
+      max-width: 340px;
+      flex-shrink: 0;
+    }
+
+    #tetris {
+      max-width: min(50vw, 400px);
+      max-height: 80vh;
+    }
+
+    .mobile-btn {
+      min-height: 44px;
+      padding: 10px;
+      font-size: 0.95rem;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 360px) {
+    .mobile-btn {
+      min-height: 48px;
+      padding: 14px;
+      font-size: 0.95rem;
+    }
+
+    #tetris-wrap {
+      gap: 10px;
+    }
+  }
+
+  /* Larger tablets and desktops - keep original desktop layout */
+  @media (min-width: 769px) {
+    .mobile-controls-wrapper {
+      display: none;
+    }
+  }
+</style>
+
+<div id="tetris-wrap">
+  <canvas id="tetris"></canvas>
   <div style="min-width:240px">
     <h2 style="margin:0 0 8px">Tetris</h2>
     <div id="score" style="font:600 18px/1 system-ui;padding:8px 12px;border:1px solid #333;border-radius:8px;background:#1a1a1a">Score: 0</div>
@@ -35,27 +234,39 @@ permalink: /projects/tetris/
       </div>
     </details>
 
-    <div id="mobile-controls" style="margin-top:12px;padding:12px;background:#1a1a1a;border:1px solid #333;border-radius:8px">
-      <div style="font:600 14px system-ui;margin-bottom:8px;text-align:center">Mobile Controls</div>
-
-      <!-- Movement Controls -->
+    <!-- Legacy mobile controls (hidden on mobile, shown on desktop for backwards compat) -->
+    <div id="mobile-controls-legacy" style="margin-top:12px;padding:12px;background:#1a1a1a;border:1px solid #333;border-radius:8px">
+      <div style="font:600 14px system-ui;margin-bottom:8px;text-align:center">Quick Controls</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
-        <button id="btn-rotate-ccw" style="padding:12px;background:#3f51b5;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">↺ CCW</button>
-        <button id="btn-rotate-cw" style="padding:12px;background:#3f51b5;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">↻ CW</button>
-        <button id="btn-hold" style="padding:12px;background:#fb8c00;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">Hold</button>
+        <button id="btn-rotate-ccw-legacy" style="padding:12px;background:#3f51b5;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">↺ CCW</button>
+        <button id="btn-rotate-cw-legacy" style="padding:12px;background:#3f51b5;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">↻ CW</button>
+        <button id="btn-hold-legacy" style="padding:12px;background:#fb8c00;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">Hold</button>
+      </div>
+    </div>
+
+    <!-- New mobile controls (shown only on mobile) -->
+    <div class="mobile-controls-wrapper">
+      <div class="mobile-controls-row top">
+        <button class="mobile-btn primary" id="btn-rotate-ccw">⟲</button>
+        <button class="mobile-btn primary" id="btn-rotate-cw">⟳</button>
+        <button class="mobile-btn hold" id="btn-hold">HOLD</button>
       </div>
 
-      <!-- Directional Controls -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
-        <button id="btn-left" style="padding:16px;background:#43a047;border:none;border-radius:6px;color:#fff;font:600 16px system-ui;cursor:pointer;touch-action:manipulation">←</button>
-        <button id="btn-down" style="padding:16px;background:#43a047;border:none;border-radius:6px;color:#fff;font:600 16px system-ui;cursor:pointer;touch-action:manipulation">↓</button>
-        <button id="btn-right" style="padding:16px;background:#43a047;border:none;border-radius:6px;color:#fff;font:600 16px system-ui;cursor:pointer;touch-action:manipulation">→</button>
-      </div>
+      <div class="mobile-controls-row bottom">
+        <!-- D-Pad -->
+        <div class="dpad">
+          <button class="mobile-btn move btn-up" id="btn-soft">▼</button>
+          <button class="mobile-btn move btn-left" id="btn-left">◀</button>
+          <button class="mobile-btn move btn-right" id="btn-right">▶</button>
+          <button class="mobile-btn move btn-down" id="btn-down">▼</button>
+        </div>
 
-      <!-- Action Controls -->
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
-        <button id="btn-hard-drop" style="padding:12px;background:#e91e63;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">Hard Drop</button>
-        <button id="btn-pause" style="padding:12px;background:#ef5350;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">Pause</button>
+        <!-- Action Buttons -->
+        <div class="actions">
+          <button class="mobile-btn primary" id="btn-rotate-cw-2">Rotate ⟳</button>
+          <button class="mobile-btn action" id="btn-hard-drop">HARD DROP</button>
+          <button class="mobile-btn" id="btn-pause">PAUSE</button>
+        </div>
       </div>
     </div>
 
@@ -256,38 +467,117 @@ permalink: /projects/tetris/
     else if (e.code==="KeyC" || e.code==="ShiftLeft" || e.code==="ShiftRight"){ hold(); }
   });
 
-  // --- Mobile Button Controls ---
-  document.getElementById("btn-left")?.addEventListener("click", ()=>{
+  // --- Mobile Controls: DAS/ARR Auto-Repeat ---
+  const V = (ms) => navigator.vibrate?.(ms); // Optional haptic feedback
+
+  // Auto-repeat binding with DAS (Delayed Auto Shift) and ARR (Auto Repeat Rate)
+  function bindRepeat(el, action, { das = 130, arr = 45 } = {}) {
+    if (!el) return;
+    let timeout = null, interval = null;
+
+    const down = (e) => {
+      e.preventDefault();
+      action(); // Execute immediately
+      V(5); // Short vibration
+      // Start auto-repeat after DAS delay
+      timeout = setTimeout(() => {
+        interval = setInterval(action, arr);
+      }, das);
+    };
+
+    const up = () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+      timeout = interval = null;
+    };
+
+    el.addEventListener('pointerdown', down, { passive: false });
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointerleave', up);
+    el.addEventListener('pointercancel', up);
+  }
+
+  // Single-press bindings (no repeat)
+  function bindSingle(el, action) {
+    if (!el) return;
+    el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      action();
+      V(8); // Slightly longer vibration for actions
+    }, { passive: false });
+  }
+
+  // Movement with auto-repeat
+  bindRepeat(document.getElementById('btn-left'), () => {
     if (paused || clearing || over || !piece) return;
-    if(!collide(piece.x-1,piece.y,piece.m)) piece.x--;
+    if (!collide(piece.x - 1, piece.y, piece.m)) piece.x--;
   });
-  document.getElementById("btn-right")?.addEventListener("click", ()=>{
+
+  bindRepeat(document.getElementById('btn-right'), () => {
     if (paused || clearing || over || !piece) return;
-    if(!collide(piece.x+1,piece.y,piece.m)) piece.x++;
+    if (!collide(piece.x + 1, piece.y, piece.m)) piece.x++;
   });
-  document.getElementById("btn-down")?.addEventListener("click", ()=>{
+
+  bindRepeat(document.getElementById('btn-down'), () => {
+    if (paused || clearing || over) return;
+    softDrop();
+  }, { das: 0, arr: 55 }); // Instant start, moderate repeat for soft drop
+
+  // Soft drop button (top button - single press)
+  bindSingle(document.getElementById('btn-soft'), () => {
     if (paused || clearing || over) return;
     softDrop();
   });
-  document.getElementById("btn-hard-drop")?.addEventListener("click", ()=>{
+
+  // Action buttons (single press)
+  bindSingle(document.getElementById('btn-hard-drop'), () => {
     if (paused || clearing || over) return;
     hardDrop();
+    V(18); // Strong vibration for hard drop
   });
-  document.getElementById("btn-rotate-cw")?.addEventListener("click", ()=>{
+
+  // Rotation buttons
+  bindSingle(document.getElementById('btn-rotate-cw'), () => {
     if (paused || clearing || over || !piece) return;
     rot(1);
   });
-  document.getElementById("btn-rotate-ccw")?.addEventListener("click", ()=>{
+
+  bindSingle(document.getElementById('btn-rotate-cw-2'), () => {
+    if (paused || clearing || over || !piece) return;
+    rot(1);
+  });
+
+  bindSingle(document.getElementById('btn-rotate-ccw'), () => {
     if (paused || clearing || over || !piece) return;
     rot(-1);
   });
-  document.getElementById("btn-hold")?.addEventListener("click", ()=>{
+
+  // Hold piece
+  bindSingle(document.getElementById('btn-hold'), () => {
     if (paused || clearing || over) return;
     hold();
   });
-  document.getElementById("btn-pause")?.addEventListener("click", ()=>{
+
+  // Pause button
+  bindSingle(document.getElementById('btn-pause'), () => {
     if (over) return;
-    paused=!paused;
+    paused = !paused;
+  });
+
+  // Legacy desktop quick controls
+  bindSingle(document.getElementById('btn-rotate-cw-legacy'), () => {
+    if (paused || clearing || over || !piece) return;
+    rot(1);
+  });
+
+  bindSingle(document.getElementById('btn-rotate-ccw-legacy'), () => {
+    if (paused || clearing || over || !piece) return;
+    rot(-1);
+  });
+
+  bindSingle(document.getElementById('btn-hold-legacy'), () => {
+    if (paused || clearing || over) return;
+    hold();
   });
 
   // --- Leaderboard (global) ---
