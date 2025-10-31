@@ -41,105 +41,178 @@ permalink: /projects/tetris/
     touch-action: none; /* Prevent scroll on canvas */
   }
 
+  /* Mobile game container */
+  .mobile-game-container {
+    display: none;
+  }
+
+  /* Compact mobile info bar */
+  .mobile-info-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  .mobile-info-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .mobile-info-label {
+    font-size: 10px;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .mobile-info-value {
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .mobile-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .mobile-preview canvas {
+    width: 40px;
+    height: 40px;
+    background: #0a0a0a;
+    border: 1px solid #222;
+    border-radius: 4px;
+  }
+
   /* Mobile-specific styles */
   .mobile-btn {
     background: var(--surface);
-    border: 1px solid #333;
-    border-radius: 14px;
-    padding: var(--btn-pad);
+    border: 2px solid #333;
+    border-radius: 16px;
+    padding: 0;
     text-align: center;
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     color: var(--fg-light);
     cursor: pointer;
-    min-height: 52px;
+    min-height: 60px;
+    min-width: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
+    font-weight: 700;
+    transition: transform 0.05s, box-shadow 0.05s;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.3);
   }
 
   .mobile-btn:active {
-    transform: translateY(1px);
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.3);
   }
 
-  .mobile-btn.primary {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px rgba(63, 81, 181, 0.25) inset;
-    background: rgba(63, 81, 181, 0.15);
+  .mobile-btn.rotate {
+    background: linear-gradient(135deg, #5e35b1 0%, #7e57c2 100%);
+    border-color: #4527a0;
+    box-shadow: 0 4px 0 #4527a0;
   }
 
-  .mobile-btn.action {
-    background: #e91e63;
-    border-color: #c2185b;
-    font-weight: 700;
+  .mobile-btn.drop {
+    background: linear-gradient(135deg, #c2185b 0%, #e91e63 100%);
+    border-color: #ad1457;
+    box-shadow: 0 4px 0 #ad1457;
+    font-size: 0.9rem;
   }
 
   .mobile-btn.hold {
-    background: #fb8c00;
+    background: linear-gradient(135deg, #ef6c00 0%, #fb8c00 100%);
     border-color: #e65100;
+    box-shadow: 0 4px 0 #e65100;
+    font-size: 0.9rem;
   }
 
   .mobile-btn.move {
-    background: #43a047;
-    border-color: #2e7d32;
-    font-size: 1.2rem;
+    background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
+    border-color: #1b5e20;
+    box-shadow: 0 4px 0 #1b5e20;
+    font-size: 1.5rem;
   }
 
-  .mobile-btn.fullscreen {
-    background: #7e57c2;
-    border-color: #5e35b1;
+  .mobile-btn.utility {
+    background: var(--surface);
+    border-color: #444;
+    box-shadow: 0 4px 0 #222;
+    font-size: 0.85rem;
   }
 
   /* Mobile controls layout */
   .mobile-controls-wrapper {
     display: none;
-    margin-top: 12px;
-    max-width: 560px;
+    width: 100%;
+    max-width: 600px;
+  }
+
+  .mobile-controls-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
     width: 100%;
   }
 
-  .mobile-controls-row {
+  /* Movement buttons span left side */
+  .mobile-btn.move-left {
+    grid-column: 1;
+  }
+
+  .mobile-btn.move-right {
+    grid-column: 2;
+  }
+
+  /* Action buttons on right side */
+  .mobile-btn.action-rotate {
+    grid-column: 3;
+  }
+
+  .mobile-btn.action-drop {
+    grid-column: 4;
+  }
+
+  /* Second row utilities */
+  .mobile-controls-utilities {
     display: grid;
-    gap: var(--gap);
-    margin-bottom: var(--gap);
-  }
-
-  .mobile-controls-row.top {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-
-  .mobile-controls-row.bottom {
-    grid-template-columns: 1fr 1fr;
-    gap: var(--gap);
-  }
-
-  /* D-pad layout */
-  .dpad {
-    display: grid;
-    grid-template-areas:
-      ". up ."
-      "left down right";
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: var(--gap);
-  }
-
-  .dpad .btn-up { grid-area: up; }
-  .dpad .btn-left { grid-area: left; }
-  .dpad .btn-right { grid-area: right; }
-  .dpad .btn-down { grid-area: down; }
-
-  /* Action buttons */
-  .actions {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--gap);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
   }
 
   /* Show mobile controls only on small screens */
   @media (max-width: 768px) {
+    /* Hide desktop sidebar */
+    #tetris-wrap > div[style*="min-width:240px"] {
+      display: none;
+    }
+
+    /* Show mobile container */
+    .mobile-game-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 100vw;
+      padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      box-sizing: border-box;
+    }
+
     .mobile-controls-wrapper {
       display: block;
     }
@@ -147,8 +220,8 @@ permalink: /projects/tetris/
     #tetris-wrap {
       flex-direction: column;
       align-items: center;
-      padding-left: max(10px, env(safe-area-inset-left));
-      padding-right: max(10px, env(safe-area-inset-right));
+      padding: 0;
+      gap: 0;
     }
 
     #mobile-controls-legacy {
@@ -156,47 +229,63 @@ permalink: /projects/tetris/
     }
 
     #tetris {
-      max-width: min(100vw - 20px, 560px);
       width: 100%;
+      max-width: 100%;
+      border-radius: 12px;
+      margin-bottom: 12px;
     }
   }
 
   /* Landscape optimization for mobile */
-  @media (orientation: landscape) and (max-height: 600px) {
-    #tetris-wrap {
+  @media (max-width: 768px) and (orientation: landscape) {
+    .mobile-game-container {
       flex-direction: row;
-      align-items: flex-start;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    .mobile-controls-wrapper {
-      max-width: 340px;
-      flex-shrink: 0;
+      gap: 10px;
+      align-items: center;
+      padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
     }
 
     #tetris {
-      max-width: min(50vw, 400px);
-      max-height: 80vh;
+      max-width: 55%;
+      max-height: calc(100vh - 16px);
+      margin-bottom: 0;
+    }
+
+    .mobile-controls-wrapper {
+      max-width: 40%;
+      flex: 1;
     }
 
     .mobile-btn {
-      min-height: 44px;
-      padding: 10px;
-      font-size: 0.95rem;
+      min-height: 50px;
+      min-width: 50px;
+      font-size: 1rem;
+    }
+
+    .mobile-info-bar {
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+
+    .mobile-info-value {
+      font-size: 12px;
     }
   }
 
-  /* Extra small screens */
+  /* Extra small screens - optimize button sizes */
   @media (max-width: 360px) {
     .mobile-btn {
-      min-height: 48px;
-      padding: 14px;
-      font-size: 0.95rem;
+      min-height: 56px;
+      min-width: 56px;
+      font-size: 1rem;
     }
 
-    #tetris-wrap {
-      gap: 10px;
+    .mobile-controls-grid {
+      gap: 8px;
+    }
+
+    .mobile-controls-utilities {
+      gap: 8px;
     }
   }
 
@@ -205,71 +294,71 @@ permalink: /projects/tetris/
     .mobile-controls-wrapper {
       display: none;
     }
+
+    .mobile-game-container {
+      display: none;
+    }
   }
 
   /* Fullscreen mode styles */
+  #tetris-wrap:fullscreen,
+  #tetris-wrap:-webkit-full-screen,
+  #tetris-wrap:-moz-full-screen,
+  #tetris-wrap:-ms-fullscreen {
+    background: var(--bg-dark);
+    width: 100vw;
+    height: 100vh;
+    padding: 10px;
+  }
+
+  #tetris-wrap:fullscreen .mobile-game-container,
+  #tetris-wrap:-webkit-full-screen .mobile-game-container,
+  #tetris-wrap:-moz-full-screen .mobile-game-container,
+  #tetris-wrap:-ms-fullscreen .mobile-game-container {
+    display: flex !important;
+    height: 100%;
+    max-width: 100%;
+  }
+
   #tetris-wrap:fullscreen .mobile-controls-wrapper,
   #tetris-wrap:-webkit-full-screen .mobile-controls-wrapper,
   #tetris-wrap:-moz-full-screen .mobile-controls-wrapper,
   #tetris-wrap:-ms-fullscreen .mobile-controls-wrapper {
-    display: block;
+    display: block !important;
   }
 
-  /* Fullscreen layout for mobile */
-  @media (max-width: 768px) {
-    #tetris-wrap:fullscreen,
-    #tetris-wrap:-webkit-full-screen,
-    #tetris-wrap:-moz-full-screen,
-    #tetris-wrap:-ms-fullscreen {
-      display: flex;
+  /* Fullscreen portrait */
+  @media (max-width: 768px) and (orientation: portrait) {
+    #tetris-wrap:fullscreen .mobile-game-container,
+    #tetris-wrap:-webkit-full-screen .mobile-game-container,
+    #tetris-wrap:-moz-full-screen .mobile-game-container,
+    #tetris-wrap:-ms-fullscreen .mobile-game-container {
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      width: 100vw;
-      padding: 10px;
-      background: var(--bg-dark);
-    }
-
-    #tetris-wrap:fullscreen .mobile-controls-wrapper,
-    #tetris-wrap:-webkit-full-screen .mobile-controls-wrapper,
-    #tetris-wrap:-moz-full-screen .mobile-controls-wrapper,
-    #tetris-wrap:-ms-fullscreen .mobile-controls-wrapper {
-      display: block !important;
-      margin-top: 8px;
-    }
-  }
-
-  /* Fullscreen landscape optimization for mobile */
-  @media (max-width: 768px) and (orientation: landscape) {
-    #tetris-wrap:fullscreen,
-    #tetris-wrap:-webkit-full-screen,
-    #tetris-wrap:-moz-full-screen,
-    #tetris-wrap:-ms-fullscreen {
-      flex-direction: row;
-      gap: 10px;
-      overflow-y: auto;
+      justify-content: space-between;
     }
 
     #tetris-wrap:fullscreen #tetris,
     #tetris-wrap:-webkit-full-screen #tetris,
     #tetris-wrap:-moz-full-screen #tetris,
     #tetris-wrap:-ms-fullscreen #tetris {
-      max-width: 45vw;
-      max-height: 90vh;
+      max-height: 60vh;
+      margin-bottom: 10px;
     }
+  }
 
-    #tetris-wrap:fullscreen .mobile-controls-wrapper,
-    #tetris-wrap:-webkit-full-screen .mobile-controls-wrapper,
-    #tetris-wrap:-moz-full-screen .mobile-controls-wrapper,
-    #tetris-wrap:-ms-fullscreen .mobile-controls-wrapper {
-      max-width: 45vw;
-      margin-top: 0;
+  /* Fullscreen landscape */
+  @media (max-width: 768px) and (orientation: landscape) {
+    #tetris-wrap:fullscreen .mobile-game-container,
+    #tetris-wrap:-webkit-full-screen .mobile-game-container,
+    #tetris-wrap:-moz-full-screen .mobile-game-container,
+    #tetris-wrap:-ms-fullscreen .mobile-game-container {
+      flex-direction: row;
     }
   }
 </style>
 
 <div id="tetris-wrap">
+  <!-- Desktop layout (shown on large screens) -->
   <canvas id="tetris"></canvas>
   <div style="min-width:240px">
     <h2 style="margin:0 0 8px">Tetris</h2>
@@ -311,36 +400,52 @@ permalink: /projects/tetris/
       <button id="btn-fullscreen-legacy" style="width:100%;padding:12px;background:#7e57c2;border:none;border-radius:6px;color:#fff;font:600 14px system-ui;cursor:pointer;touch-action:manipulation">⛶ Fullscreen</button>
     </div>
 
-    <!-- New mobile controls (shown only on mobile) -->
-    <div class="mobile-controls-wrapper">
-      <div class="mobile-controls-row top">
-        <button class="mobile-btn primary" id="btn-rotate-ccw">⟲</button>
-        <button class="mobile-btn primary" id="btn-rotate-cw">⟳</button>
-        <button class="mobile-btn hold" id="btn-hold">HOLD</button>
-      </div>
+    <div style="margin-top:14px">
+      <div style="font:600 14px system-ui;margin:4px 0">Leaderboard (Top 10)</div>
+      <ol id="lb" style="margin:6px 0 0;padding-left:22px;font:14px/1.4 system-ui"></ol>
+    </div>
+  </div>
 
-      <div class="mobile-controls-row bottom">
-        <!-- D-Pad -->
-        <div class="dpad">
-          <button class="mobile-btn move btn-up" id="btn-soft">▼</button>
-          <button class="mobile-btn move btn-left" id="btn-left">◀</button>
-          <button class="mobile-btn move btn-right" id="btn-right">▶</button>
-          <button class="mobile-btn move btn-down" id="btn-down">▼</button>
+  <!-- Mobile layout (shown on small screens) -->
+  <div class="mobile-game-container">
+    <!-- Mobile info bar (compact) -->
+    <div style="width: 100%;">
+      <div class="mobile-info-bar">
+        <div class="mobile-info-item">
+          <div class="mobile-info-label">Score</div>
+          <div class="mobile-info-value" id="score-mobile">0</div>
         </div>
-
-        <!-- Action Buttons -->
-        <div class="actions">
-          <button class="mobile-btn primary" id="btn-rotate-cw-2">Rotate ⟳</button>
-          <button class="mobile-btn action" id="btn-hard-drop">HARD DROP</button>
-          <button class="mobile-btn" id="btn-pause">PAUSE</button>
-          <button class="mobile-btn fullscreen" id="btn-fullscreen">⛶ FULL</button>
+        <div class="mobile-info-item">
+          <div class="mobile-info-label">Level</div>
+          <div class="mobile-info-value" id="level-mobile">1</div>
+        </div>
+        <div class="mobile-preview">
+          <div class="mobile-info-label">Next</div>
+          <canvas id="next-mobile" width="60" height="60"></canvas>
+        </div>
+        <div class="mobile-preview">
+          <div class="mobile-info-label">Hold</div>
+          <canvas id="hold-mobile" width="60" height="60"></canvas>
         </div>
       </div>
     </div>
 
-    <div style="margin-top:14px">
-      <div style="font:600 14px system-ui;margin:4px 0">Leaderboard (Top 10)</div>
-      <ol id="lb" style="margin:6px 0 0;padding-left:22px;font:14px/1.4 system-ui"></ol>
+    <!-- New simplified mobile controls -->
+    <div class="mobile-controls-wrapper">
+      <!-- Main controls -->
+      <div class="mobile-controls-grid">
+        <button class="mobile-btn move move-left" id="btn-left-mobile">◀</button>
+        <button class="mobile-btn move move-right" id="btn-right-mobile">▶</button>
+        <button class="mobile-btn rotate action-rotate" id="btn-rotate-mobile">⟳</button>
+        <button class="mobile-btn drop action-drop" id="btn-drop-mobile">DROP</button>
+      </div>
+
+      <!-- Utility buttons -->
+      <div class="mobile-controls-utilities">
+        <button class="mobile-btn hold" id="btn-hold-mobile">HOLD</button>
+        <button class="mobile-btn utility" id="btn-pause-mobile">PAUSE</button>
+        <button class="mobile-btn utility" id="btn-fullscreen-mobile">⛶</button>
+      </div>
     </div>
   </div>
 </div>
@@ -370,10 +475,35 @@ permalink: /projects/tetris/
   const cvs=document.getElementById("tetris"), ctx=cvs.getContext("2d");
   const ncv=document.getElementById("next"), nctx=ncv.getContext("2d");
   const hcv=document.getElementById("hold"), hctx=hcv.getContext("2d");
+
+  // Mobile canvases
+  const ncvMobile=document.getElementById("next-mobile"), nctxMobile=ncvMobile?.getContext("2d");
+  const hcvMobile=document.getElementById("hold-mobile"), hctxMobile=hcvMobile?.getContext("2d");
+
   function resize(){
-    const maxW=Math.min(document.getElementById("tetris-wrap").clientWidth-260, 520);
-    const cell=Math.max(16, Math.floor(Math.min(maxW, 520)/W));
-    cvs.width=cell*W; cvs.height=cell*H; CELL=cell;
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+      // Mobile: maximize canvas size
+      const containerWidth = Math.min(window.innerWidth - 16, 600);
+      const containerHeight = window.innerHeight;
+
+      // Calculate cell size to fit screen nicely
+      const cellByWidth = Math.floor(containerWidth / W);
+      const cellByHeight = Math.floor((containerHeight * 0.6) / H); // Use 60% of height for canvas
+      const cell = Math.max(18, Math.min(cellByWidth, cellByHeight, 32));
+
+      cvs.width = cell * W;
+      cvs.height = cell * H;
+      CELL = cell;
+    } else {
+      // Desktop: original sizing
+      const maxW = Math.min(document.getElementById("tetris-wrap").clientWidth - 260, 520);
+      const cell = Math.max(16, Math.floor(Math.min(maxW, 520) / W));
+      cvs.width = cell * W;
+      cvs.height = cell * H;
+      CELL = cell;
+    }
   }
   let CELL=26; resize(); addEventListener("resize", resize);
 
@@ -384,6 +514,20 @@ permalink: /projects/tetris/
   let score=0, level=1, dropTimer=0, last=0, paused=false, over=false, clearing=null, didSave=false;
   const scoreEl=document.getElementById("score"), levelEl=document.getElementById("level"),
         lbEl=document.getElementById("lb"), nameInp=document.getElementById("name");
+
+  // Mobile elements
+  const scoreMobileEl=document.getElementById("score-mobile");
+  const levelMobileEl=document.getElementById("level-mobile");
+
+  // Update score/level for both desktop and mobile
+  function updateScore() {
+    const scoreText = score.toString();
+    const levelText = level.toString();
+    if (scoreEl) scoreEl.textContent = "Score: " + scoreText;
+    if (levelEl) levelEl.textContent = "Level: " + levelText;
+    if (scoreMobileEl) scoreMobileEl.textContent = scoreText;
+    if (levelMobileEl) levelMobileEl.textContent = levelText;
+  }
 
   const clone = m => m.map(r=>r.slice());
   function levelFromScore(s){ return 1 + Math.floor(s/500); }
@@ -405,19 +549,27 @@ permalink: /projects/tetris/
   // --- Mini renders ---
   function drawMini(ctx, cv, shape){
     ctx.clearRect(0,0,cv.width,cv.height);
-    if (!shape) { ctx.fillStyle="#111"; ctx.fillRect(0,0,cv.width,cv.height); return; }
+    if (!shape) { ctx.fillStyle="#0a0a0a"; ctx.fillRect(0,0,cv.width,cv.height); return; }
     const m = SHAPES[shape.c].m, size = Math.max(m.length, m[0].length);
     const cell = Math.floor(Math.min(cv.width, cv.height)/(size+1));
     const ox = Math.floor((cv.width - cell*m[0].length)/2);
     const oy = Math.floor((cv.height - cell*m.length)/2);
-    ctx.fillStyle="#111"; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle="#0a0a0a"; ctx.fillRect(0,0,cv.width,cv.height);
     for(let y=0;y<m.length;y++) for(let x=0;x<m[y].length;x++){
       if(!m[y][x]) continue; ctx.fillStyle=COLORS[shape.c];
       ctx.fillRect(ox + x*cell +1, oy + y*cell +1, cell-2, cell-2);
     }
   }
-  const drawNext=()=>drawMini(nctx,ncv,nextPiece);
-  const drawHold=()=>drawMini(hctx,hcv,holdPiece);
+
+  const drawNext=()=>{
+    drawMini(nctx,ncv,nextPiece);
+    if (nctxMobile) drawMini(nctxMobile,ncvMobile,nextPiece);
+  };
+
+  const drawHold=()=>{
+    drawMini(hctx,hcv,holdPiece);
+    if (hctxMobile) drawMini(hctxMobile,hcvMobile,holdPiece);
+  };
 
   // --- Piece flow ---
   function spawn(){
@@ -490,7 +642,7 @@ permalink: /projects/tetris/
   function applyClears(){
     clearing.rows.sort((a,b)=>a-b).forEach(y=>{ board.splice(y,1); board.unshift(Array(W).fill(0)); });
     clearing=null; level = levelFromScore(score);
-    scoreEl.textContent="Score: "+score; levelEl.textContent="Level: "+level;
+    updateScore();
   }
 
   // --- Lock / game over ---
@@ -505,7 +657,7 @@ permalink: /projects/tetris/
     piece=null;
     if (aboveTop){ over=true; saveScoreOnce(); return; }
     if (!checkClears()) spawn();
-    scoreEl.textContent="Score: "+score; levelEl.textContent="Level: "+level;
+    updateScore();
   }
 
   // --- Moves ---
@@ -575,59 +727,34 @@ permalink: /projects/tetris/
     }, { passive: false });
   }
 
-  // Movement with auto-repeat
-  bindRepeat(document.getElementById('btn-left'), () => {
+  // New mobile controls
+  bindRepeat(document.getElementById('btn-left-mobile'), () => {
     if (paused || clearing || over || !piece) return;
     if (!collide(piece.x - 1, piece.y, piece.m)) piece.x--;
   });
 
-  bindRepeat(document.getElementById('btn-right'), () => {
+  bindRepeat(document.getElementById('btn-right-mobile'), () => {
     if (paused || clearing || over || !piece) return;
     if (!collide(piece.x + 1, piece.y, piece.m)) piece.x++;
   });
 
-  bindRepeat(document.getElementById('btn-down'), () => {
-    if (paused || clearing || over) return;
-    softDrop();
-  }, { das: 0, arr: 55 }); // Instant start, moderate repeat for soft drop
-
-  // Soft drop button (top button - single press)
-  bindSingle(document.getElementById('btn-soft'), () => {
-    if (paused || clearing || over) return;
-    softDrop();
+  bindSingle(document.getElementById('btn-rotate-mobile'), () => {
+    if (paused || clearing || over || !piece) return;
+    rot(1);
   });
 
-  // Action buttons (single press)
-  bindSingle(document.getElementById('btn-hard-drop'), () => {
+  bindSingle(document.getElementById('btn-drop-mobile'), () => {
     if (paused || clearing || over) return;
     hardDrop();
     V(18); // Strong vibration for hard drop
   });
 
-  // Rotation buttons
-  bindSingle(document.getElementById('btn-rotate-cw'), () => {
-    if (paused || clearing || over || !piece) return;
-    rot(1);
-  });
-
-  bindSingle(document.getElementById('btn-rotate-cw-2'), () => {
-    if (paused || clearing || over || !piece) return;
-    rot(1);
-  });
-
-  bindSingle(document.getElementById('btn-rotate-ccw'), () => {
-    if (paused || clearing || over || !piece) return;
-    rot(-1);
-  });
-
-  // Hold piece
-  bindSingle(document.getElementById('btn-hold'), () => {
+  bindSingle(document.getElementById('btn-hold-mobile'), () => {
     if (paused || clearing || over) return;
     hold();
   });
 
-  // Pause button
-  bindSingle(document.getElementById('btn-pause'), () => {
+  bindSingle(document.getElementById('btn-pause-mobile'), () => {
     if (over) return;
     paused = !paused;
   });
@@ -650,14 +777,14 @@ permalink: /projects/tetris/
 
   // --- Fullscreen ---
   const wrapEl = document.getElementById('tetris-wrap');
-  const fsBtn = document.getElementById('btn-fullscreen');
+  const fsBtnMobile = document.getElementById('btn-fullscreen-mobile');
   const fsBtnLegacy = document.getElementById('btn-fullscreen-legacy');
 
   function updateFullscreenButtons() {
     const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
-    const text = isFullscreen ? '⛶ EXIT' : '⛶ FULL';
+    const textMobile = isFullscreen ? '✕' : '⛶';
     const textLegacy = isFullscreen ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
-    if (fsBtn) fsBtn.textContent = text;
+    if (fsBtnMobile) fsBtnMobile.textContent = textMobile;
     if (fsBtnLegacy) fsBtnLegacy.textContent = textLegacy;
   }
 
@@ -704,7 +831,7 @@ permalink: /projects/tetris/
   });
 
   // Bind fullscreen buttons
-  bindSingle(fsBtn, toggleFullscreen);
+  bindSingle(fsBtnMobile, toggleFullscreen);
   bindSingle(fsBtnLegacy, toggleFullscreen);
 
   // --- Leaderboard (global) ---
@@ -739,7 +866,7 @@ permalink: /projects/tetris/
     board=Array.from({length:H},()=>Array(W).fill(0));
     score=0; level=1; over=false; paused=false; clearing=null; didSave=false;
     bag=BAG(); nextPiece=bag.pop(); holdPiece=null; canHold=true;
-    scoreEl.textContent="Score: 0"; levelEl.textContent="Level: 1";
+    updateScore();
     const saved = localStorage.getItem("tetris_name") || "YOU"; if (nameInp) nameInp.value = saved;
     fetchLeaderboard(); spawn();
   }
