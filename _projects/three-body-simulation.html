@@ -11,13 +11,13 @@ permalink: /projects/three-body-simulation/
 <script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.min.js"></script>
 <script>
 let bodies = [];
-const resetThreshold = 800; // distance beyond which we reset
+let resetThreshold = 800; // distance beyond which we reset
 let resetButton;
+let cnv;
 
 function setup() {
-  // Create the canvas and attach it to the #three-body-sim div
-  let cnv = createCanvas(600, 400);
-  cnv.parent('three-body-sim');
+  // Create responsive canvas
+  createOrResizeCanvas();
 
   // Create a button in normal HTML flow (no absolute positioning)
   resetButton = createButton('Reset Simulation');
@@ -25,6 +25,32 @@ function setup() {
   resetButton.mousePressed(resetSimulation);
 
   resetSimulation();
+}
+
+function createOrResizeCanvas() {
+  const container = document.getElementById('three-body-sim');
+  const maxW = Math.min((container?.clientWidth || 600), 800);
+  const w = Math.max(300, maxW);
+  const h = Math.round(w * 0.6); // maintain aspect ratio
+
+  if (!cnv) {
+    cnv = createCanvas(w, h);
+    cnv.parent('three-body-sim');
+  } else {
+    resizeCanvas(w, h);
+  }
+
+  // Adjust reset threshold based on canvas size
+  resetThreshold = Math.max(w, h) * 1.5;
+}
+
+function windowResized() {
+  createOrResizeCanvas();
+  // Keep existing bodies but adjust if needed
+  for (let b of bodies) {
+    b.pos.x = constrain(b.pos.x, 0, width);
+    b.pos.y = constrain(b.pos.y, 0, height);
+  }
 }
 
 function resetSimulation() {
