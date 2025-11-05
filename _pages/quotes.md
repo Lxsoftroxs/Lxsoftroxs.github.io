@@ -5,6 +5,10 @@ date: 2025-10-18
 permalink: /quotes/
 ---
 
+"If you had no bad luck, you would have no luck at all"                                  
+— My mother
+
+
 “The universe is a machine for the making of Gods.”  
 — Henri Bergson
 
