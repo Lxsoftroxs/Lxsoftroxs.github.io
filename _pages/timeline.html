@@ -525,8 +525,11 @@ var timelineData = [
 
 // Calculate age from birthdate if provided
 function calculateAge(birthDate, eventDate) {
-  const birth = new Date(birthDate);
-  const event = new Date(eventDate);
+  // Parse as local dates to avoid timezone issues
+  const birthParts = birthDate.split('-');
+  const birth = new Date(birthParts[0], birthParts[1] - 1, birthParts[2]);
+  const eventParts = eventDate.split('-');
+  const event = new Date(eventParts[0], eventParts[1] - 1, eventParts[2]);
   let age = event.getFullYear() - birth.getFullYear();
   const m = event.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && event.getDate() < birth.getDate())) {
@@ -538,8 +541,11 @@ function calculateAge(birthDate, eventDate) {
 // Sort events by date
 function sortEvents(ascending = true) {
   return timelineData.sort((a, b) => {
-    const dateA = new Date(a.date);
-    const dateB = new Date(b.date);
+    // Parse as local dates to avoid timezone issues
+    const partsA = a.date.split('-');
+    const dateA = new Date(partsA[0], partsA[1] - 1, partsA[2]);
+    const partsB = b.date.split('-');
+    const dateB = new Date(partsB[0], partsB[1] - 1, partsB[2]);
     return ascending ? dateA - dateB : dateB - dateA;
   });
 }
@@ -587,8 +593,9 @@ function renderTimeline(events) {
     const content = document.createElement('div');
     content.className = 'timeline-content';
 
-    // Format date
-    const eventDate = new Date(event.date);
+    // Format date (parse as local date to avoid timezone issues)
+    const dateParts = event.date.split('-');
+    const eventDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
     const dateStr = eventDate.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -654,7 +661,11 @@ function updateStats(events) {
   document.getElementById('total-events').textContent = events.length;
 
   if (events.length > 0) {
-    const dates = events.map(e => new Date(e.date));
+    // Parse as local dates to avoid timezone issues
+    const dates = events.map(e => {
+      const parts = e.date.split('-');
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    });
     const minYear = Math.min(...dates.map(d => d.getFullYear()));
     const maxYear = Math.max(...dates.map(d => d.getFullYear()));
     document.getElementById('years-span').textContent = maxYear - minYear + 1;
