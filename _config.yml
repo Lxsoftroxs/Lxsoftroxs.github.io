@@ -16,3 +16,6 @@ collections:
     permalink: /:path/
   comments:
     output: false
+  timeline:
+    output: true
+    permalink: /timeline/:title/
