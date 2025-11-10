@@ -112,7 +112,7 @@ permalink: /timeline/
 /* Timeline item */
 .timeline-item {
   position: relative;
-  margin-bottom: 50px;
+  margin-bottom: 30px; /* Minimum spacing, will be overridden dynamically */
   opacity: 0;
   animation: fadeIn 0.6s ease forwards;
 }
@@ -572,6 +572,38 @@ function filterEvents(searchTerm, category) {
   return filtered;
 }
 
+// Calculate dynamic spacing based on date differences
+function calculateSpacing(currentDate, nextDate) {
+  if (!nextDate) return 30; // Last item uses minimum spacing
+
+  // Parse dates as local dates to avoid timezone issues
+  const currentParts = currentDate.split('-');
+  const current = new Date(currentParts[0], currentParts[1] - 1, currentParts[2]);
+  const nextParts = nextDate.split('-');
+  const next = new Date(nextParts[0], nextParts[1] - 1, nextParts[2]);
+
+  // Calculate difference in days
+  const diffTime = Math.abs(next - current);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  // Spacing configuration
+  const MIN_SPACING = 30;    // Minimum spacing in pixels
+  const MAX_SPACING = 300;   // Maximum spacing in pixels
+  const SCALE_FACTOR = 0.5;  // Pixels per day (adjust for desired sensitivity)
+
+  // Calculate spacing with logarithmic scaling for better visual distribution
+  // This prevents very old events from being too far apart
+  let spacing = MIN_SPACING + Math.log(diffDays + 1) * 30 * SCALE_FACTOR;
+
+  // Alternative: linear scaling (uncomment to use instead)
+  // let spacing = MIN_SPACING + (diffDays * SCALE_FACTOR);
+
+  // Clamp between min and max
+  spacing = Math.max(MIN_SPACING, Math.min(MAX_SPACING, spacing));
+
+  return Math.round(spacing);
+}
+
 // Render timeline
 function renderTimeline(events) {
   const container = document.getElementById('timeline-events');
@@ -586,6 +618,11 @@ function renderTimeline(events) {
     const item = document.createElement('div');
     item.className = `timeline-item ${index % 2 === 0 ? 'left' : 'right'}`;
     item.style.animationDelay = `${index * 0.1}s`;
+
+    // Apply dynamic spacing based on date difference to next event
+    const nextEvent = events[index + 1];
+    const spacing = calculateSpacing(event.date, nextEvent ? nextEvent.date : null);
+    item.style.marginBottom = `${spacing}px`;
 
     const dot = document.createElement('div');
     dot.className = `timeline-dot ${event.milestone ? 'milestone' : ''}`;
