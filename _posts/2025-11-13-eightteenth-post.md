@@ -17,11 +17,12 @@ This wasn’t very poetic or like very preformative, which feels odd for me but 
 
 
 Some of the things I’ve written to myself as things to remember:
-We live in the greatest era of art (I saw the chainsaw man movie)
-Who is Patrick (I then created the timeline. . . which i still need to fix)
-You have an anxiety PROBLEM (I’m gonna change my meds around)
-To be in sustainable love (notes from my research)
-Understand yourself, have compassion for yourself, be your own person, communicate and communicate about how you communicate, trust the relationship (most of the problems with relationships stem from our own perspective on how our insecure attachment types are affecting the relationships negatively and how anxiety and a lack of trust plus any resentment will kill the relationship)
+
+We live in the greatest era of art (I saw the chainsaw man movie)                                                                                                                                                                                                  
+Who is Patrick (I then created the timeline. . . which i still need to fix)                                                                                                                                                                                                 
+You have an anxiety PROBLEM (I’m gonna change my meds around)                                                                                                                                                                                                 
+To be in sustainable love (notes from my research)                                                                                                                                                                                                                                                                                                                                                                                                  
+Understand yourself, have compassion for yourself, be your own person, communicate and communicate about how you communicate, trust the relationship (most of the problems with relationships stem from our own perspective on how our insecure attachment types are affecting the relationships negatively and how anxiety and a lack of trust plus any resentment will kill the relationship)                                                                                                                                                                                                 
 My friends are so talented. I’ve witnessed their growth and its so commendable. (Zach sent me more of his poetry)
 
 Build your own blog, I'd love to see your side, I'm tired of eating my own tail. 
