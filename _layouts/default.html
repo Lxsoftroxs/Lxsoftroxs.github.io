@@ -4,11 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Content Security Policy for XSS Protection -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://utteranc.es https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://utteranc.es https://api.github.com https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app; frame-src https://utteranc.es;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://polyfill.io https://utteranc.es https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://utteranc.es https://api.github.com https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app; frame-src https://utteranc.es;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>{{ page.title }} - {{ site.title }}</title>
+  <!-- MathJax for LaTeX rendering -->
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
   <style>
     /* Critical CSS to prevent flash of unstyled content */
     .no-flash { visibility: hidden; }
