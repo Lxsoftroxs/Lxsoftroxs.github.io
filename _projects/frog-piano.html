@@ -11,8 +11,8 @@ permalink: /projects/frog-piano/
 </div>
 
 <!-- p5 core + sound addon -->
-<script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/p5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/p5@1.4.2/lib/addons/p5.sound.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/addons/p5.sound.min.js"></script>
 
 <script>
 /* ========================
@@ -48,14 +48,31 @@ function noteName(m) {
 }
 
 function ensureAudio() {
-  try { userStartAudio(); } catch(e) {}
-  const ctx = typeof getAudioContext === "function" ? getAudioContext() : null;
-  if (ctx && ctx.state !== "running") ctx.resume?.();
-  if (!osc) {
-    osc = new p5.Oscillator("sine");
-    osc.start();
-    osc.amp(0);
+  try {
+    if (typeof userStartAudio === "function") {
+      userStartAudio();
+    }
+  } catch(e) {
+    console.log("userStartAudio not available:", e);
   }
+
+  const ctx = typeof getAudioContext === "function" ? getAudioContext() : null;
+  if (ctx) {
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(e => console.log("Resume failed:", e));
+    }
+  }
+
+  if (!osc) {
+    try {
+      osc = new p5.Oscillator("sine");
+      osc.start();
+      osc.amp(0);
+    } catch(e) {
+      console.error("Failed to create oscillator:", e);
+    }
+  }
+
   const btn = document.getElementById("start-audio");
   if (btn) btn.style.display = "none";
 }
@@ -208,10 +225,15 @@ function setup() {
   };
 
   const btn = document.getElementById("start-audio");
-  const ctx = typeof getAudioContext === "function" ? getAudioContext() : null;
-  if (btn && ctx && ctx.state !== "running") {
-    btn.style.display = "inline-block";
+  if (btn) {
     btn.addEventListener("click", ensureAudio);
+    // Check if we need to show the button
+    setTimeout(() => {
+      const ctx = typeof getAudioContext === "function" ? getAudioContext() : null;
+      if (ctx && ctx.state === "suspended") {
+        btn.style.display = "inline-block";
+      }
+    }, 100);
   }
 }
 

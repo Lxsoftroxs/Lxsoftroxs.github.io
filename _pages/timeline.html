@@ -596,7 +596,7 @@ function calculateSpacing(currentDate, nextDate) {
   let spacing = MIN_SPACING + Math.log(diffDays + 1) * 30 * SCALE_FACTOR;
 
   // Alternative: linear scaling (uncomment to use instead)
-  let spacing = MIN_SPACING + (diffDays * SCALE_FACTOR);
+  // let spacing = MIN_SPACING + (diffDays * SCALE_FACTOR);
 
   // Clamp between min and max
   spacing = Math.max(MIN_SPACING, Math.min(MAX_SPACING, spacing));
