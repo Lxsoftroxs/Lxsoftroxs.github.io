@@ -4,6 +4,100 @@ layout: default
 permalink: /projects/three-body-simulation/
 ---
 
+<style>
+.latex-section {
+  font-family: 'Computer Modern', 'Latin Modern Roman', 'Times New Roman', serif;
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.98);
+  color: #1a1a1a;
+  line-height: 1.8;
+  border-radius: 2px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.latex-section h1 {
+  font-size: 2.2em;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 10px;
+  color: #000;
+  font-family: 'Computer Modern', 'Latin Modern Roman', serif;
+}
+
+.latex-section .author {
+  text-align: center;
+  font-size: 1.1em;
+  margin-bottom: 5px;
+  font-style: italic;
+}
+
+.latex-section .date {
+  text-align: center;
+  font-size: 1em;
+  margin-bottom: 30px;
+  color: #555;
+}
+
+.latex-section h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-top: 30px;
+  margin-bottom: 15px;
+  color: #000;
+}
+
+.latex-section p {
+  text-align: justify;
+  text-indent: 1.5em;
+  margin-bottom: 0.8em;
+}
+
+.latex-section p:first-of-type {
+  text-indent: 0;
+}
+
+.latex-section .quote {
+  font-style: italic;
+  margin: 20px 40px;
+  padding-left: 20px;
+  border-left: 3px solid #ccc;
+  text-indent: 0;
+}
+
+.latex-section em {
+  font-style: italic;
+}
+
+.latex-section .math {
+  font-family: 'Cambria Math', 'Latin Modern Math', 'STIX Two Math', serif;
+  font-style: italic;
+}
+
+.latex-section .footnote {
+  font-size: 0.9em;
+  margin-top: 30px;
+  padding-top: 10px;
+  border-top: 1px solid #ddd;
+  text-indent: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .latex-section {
+    background: rgba(40, 40, 40, 0.95);
+    color: #e8e8e8;
+  }
+  .latex-section h1,
+  .latex-section h2 {
+    color: #f0f0f0;
+  }
+  .latex-section .quote {
+    border-left-color: #666;
+  }
+}
+</style>
+
 <div id="three-body-sim">
   <h2>3-Body Simulation</h2>
 </div>
@@ -124,3 +218,33 @@ class Body {
   }
 }
 </script>
+
+<div class="latex-section">
+  <h1>Never Get Lost Again</h1>
+  <p class="author">Patrick Shaw</p>
+  <p class="date">2025</p>
+
+  <p>Do you ever wander the forest alone? Ever walk the streets while keeping your phone on silent? I believe wandering to be fundamental to human curiosity.</p>
+
+  <p class="quote">"Once I know where I am, then the world becomes as narrow as a map. When I don't know, the world feels unlimited." ― Liu Cixin, <em>The Dark Forest</em></p>
+
+  <p>When I read fantasy stories I ponder how people functioned before GPS or the detailed maps you find within libraries. With this question in mind I began to think, "Where do I go when I can't see every detail of my surroundings?" and my research was born. Developing the full question here: given a finite set of known <span class="math">k</span><sup>⋆</sup> and unknown <span class="math">k</span><sup>○</sup> points of interest on a finite section of <span class="math">ℝ</span><sup>2</sup> space, the points are then connected by a geodesic line (Roads). Let a variable <span class="math">ω</span> (walkspeed) describe the speed of travel on the plane; when your location is shared with the coordinates of the lines, set a new value for speed of travel <span class="math">v</span> (roadspeed). Describe a relation between <span class="math">ω</span> and <span class="math">v</span> where <span class="math">v</span> is greater. Determine your location of origin <span class="math">P</span> and destination <span class="math">Q</span>, with the information above determine the optimal heading angle <span class="math">θ</span> when accounting for road jumps*.</p>
+
+  <p>The conjecture I am forming: there is an algebraic equation to describe the optimal angle of heading, with a defined number of <span class="math">K</span><sup>⋆</sup> and <span class="math">K</span><sup>○</sup> POIs; or an unknown <span class="math">P</span>, but only known POIs.</p>
+
+  <h2>Approach</h2>
+
+  <p>Beginning my approach to this problem, I asked math professors how they would start. I was specifically seeking an equation that would take input variables of <span class="math">k</span><sup>⋆</sup> and <span class="math">k</span><sup>○</sup> POIs, <span class="math">ω</span>, and <span class="math">v</span>; that could then be converted into the <span class="math">θ</span> of optimal direction of heading. The first step I took to create experimental data was forming an algorithm that could draw rays from <span class="math">P</span> that then would describe the travel path with an output of time. By running the simulation code for every point coordinate on the finite plane as <span class="math">P</span> with rays to all other coordinates, without changing the POI coordinates; I could build a three dimensional map that marks time as the extra dimension. The vertical axis would then be time, creating a topological map where the steepest descent described the fastest path, converting the algorithm into a calculus problem.</p>
+
+  <p>Comparatively, I needed two maps per set of POIs to develop an understanding of how full knowledge and partial knowledge of all points would alter the <span class="math">θ</span>. By relating the differing levels of information and paths, I could narrow the error margin down for the limited knowledge pathing. Then by randomizing the POIs and comparing the three dimensional maps, the angle of maximal descent, within the frame of reference of <span class="math">P</span> and <span class="math">Q</span>, could be approximated then compared with the initial conditions to form an equation.</p>
+
+  <h2>Reflections</h2>
+
+  <p>My journey through attempting mathematical research has been backed by many stories of computational simulations defining the data we begin with, only to compare with reality and rebuild and restructure. This topic was important to me as I enjoyed the brain teaser element, alongside my enjoyment of wandering cities until I got lost; I liked to challenge myself to find a path through any problem.</p>
+
+  <p>To further expand on this research problem I will need to build a better analysis of the data that I have collected from simulations. Then to also learn more about probabilistic analysis for the alternate initial condition of an unknown origin. Broadening the scope of the research there are many more avenues that could be worked on, like path finding optimization computationally through the A* algorithm or the newer deterministic <span class="math">O</span>(<span class="math">m</span> log<sup>2/3</sup><span class="math">n</span>)-time algorithm by Duan et al (2025). An increase in dimensions for the map terrain, curved roads, density of points generating faster roads, and/or a look into infinite dimensionality with infinite roads to see if the path integral is emergent or with roads of infinite speeds for a more mathematical approach to finding limits of directionality.</p>
+
+  <p>Fundamentally, the question seems significant to others as it can help those who are lost; however, I suspect it's a red herring as human ingenuity tends to trump mathematical analysis in real world scenarios. Some examples are following streams, listening for cars, or finding elevation. Time is one of our most finite resources, but is it philosophically flawed to optimize every second for its greatest potential within reality?</p>
+
+  <p class="footnote">*Road Jumps is the strategy to leave a road in order to join another road to optimize for the total time even with the slower walk speed between paths.</p>
+</div>
