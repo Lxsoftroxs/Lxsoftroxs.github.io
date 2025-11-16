@@ -1,0 +1,132 @@
+---
+layout: default
+title: "Pathfinding Optimization Research"
+permalink: /projects/optimization-project/
+description: "Mathematical research on optimal pathfinding with partial knowledge"
+---
+
+<!-- MathJax for LaTeX-style mathematical notation -->
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']]
+    }
+  };
+</script>
+
+<style>
+  .optimization-paper {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #fafafa;
+    border: 1px solid #ddd;
+    font-family: 'Computer Modern', 'Latin Modern Roman', Georgia, serif;
+    line-height: 1.8;
+    color: #2a2a2a;
+  }
+
+  .optimization-paper h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    font-weight: normal;
+  }
+
+  .optimization-paper .author {
+    text-align: center;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    font-style: italic;
+  }
+
+  .optimization-paper h2 {
+    font-size: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .optimization-paper p {
+    text-align: justify;
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+  }
+
+  .optimization-paper blockquote {
+    margin: 1.5rem 2rem;
+    padding: 1rem;
+    border-left: 3px solid #666;
+    font-style: italic;
+    background: #f5f5f5;
+  }
+
+  .optimization-paper .footnote {
+    font-size: 0.9rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ccc;
+  }
+
+  /* Math notation styling */
+  mjx-container {
+    display: inline-block;
+    margin: 0 0.1rem;
+  }
+
+  @media (max-width: 768px) {
+    .optimization-paper {
+      padding: 1rem;
+      margin: 1rem;
+    }
+
+    .optimization-paper h1 {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+
+<div class="optimization-paper">
+  <h1>Never Get Lost Again</h1>
+  <div class="author">Patrick Shaw<br>2025</div>
+
+  <p>Do you ever wander the forest alone? Ever walk the streets while keeping your phone on silent? I believe wandering to be fundamental to human curiosity.</p>
+
+  <blockquote>
+    "Once I know where I am, then the world becomes as narrow as a map. When I don't know, the world feels unlimited." ― Liu Cixin, <em>The Dark Forest</em>
+  </blockquote>
+
+  <p>When I read fantasy stories I ponder how people functioned before GPS or the detailed maps you find within libraries. With this question in mind I began to think, "Where do I go when I can't see every detail of my surroundings?" and my research was born.</p>
+
+  <h2>Problem Formulation</h2>
+
+  <p>Developing the full question here: given a finite set of known $k^{\star}$ and unknown $k^{\circ}$ points of interest on a finite section of $\mathbb{R}^2$ space, the points are then connected by a geodesic line (Roads). Let a variable $\omega$ (walkspeed) describe the speed of travel on the plane; when your location is shared with the coordinates of the lines, set a new value for speed of travel $v$ (roadspeed). Describe a relation between $\omega$ and $v$ where $v$ is greater. Determine your location of origin $P$ and destination $Q$, with the information above determine the optimal heading angle $\theta$ when accounting for road jumps*.</p>
+
+  <p>The conjecture I am forming: there is an algebraic equation to describe the optimal angle of heading, with a defined number of $k^{\star}$ and $k^{\circ}$ POIs; or an unknown $P$, but only known POIs.</p>
+
+  <h2>Approach</h2>
+
+  <p>Beginning my approach to this problem, I asked math professors how they would start. I was specifically seeking an equation that would take input variables of $k^{\star}$ and $k^{\circ}$ POIs, $\omega$, and $v$; that could then be converted into the $\theta$ of optimal direction of heading.</p>
+
+  <p>The first step I took to create experimental data was forming an algorithm that could draw rays from $P$ that then would describe the travel path with an output of time. By running the simulation code for every point coordinate on the finite plane as $P$ with rays to all other coordinates, without changing the POI coordinates; I could build a three dimensional map that marks time as the extra dimension. The vertical axis would then be time, creating a topological map where the steepest descent described the fastest path, converting the algorithm into a calculus problem.</p>
+
+  <p>Comparatively, I needed two maps per set of POIs to develop an understanding of how full knowledge and partial knowledge of all points would alter the $\theta$. By relating the differing levels of information and paths, I could narrow the error margin down for the limited knowledge pathing. Then by randomizing the POIs and comparing the three dimensional maps, the angle of maximal descent, within the frame of reference of $P$ and $Q$, could be approximated then compared with the initial conditions to form an equation.</p>
+
+  <h2>Reflection</h2>
+
+  <p>My journey through attempting mathematical research has been backed by many stories of computational simulations defining the data we begin with, only to compare with reality and rebuild and restructure. This topic was important to me as I enjoyed the brain teaser element, alongside my enjoyment of wandering cities until I got lost; I liked to challenge myself to find a path through any problem.</p>
+
+  <p>To further expand on this research problem I will need to build a better analysis of the data that I have collected from simulations. Then to also learn more about probabilistic analysis for the alternate initial condition of an unknown origin.</p>
+
+  <h2>Future Directions</h2>
+
+  <p>Broadening the scope of the research there are many more avenues that could be worked on, like path finding optimization computationally through the A* algorithm or the newer deterministic $O(m \log^{2/3} n)$-time algorithm by Duan et al (2025). An increase in dimensions for the map terrain, curved roads, density of points generating faster roads, and/or a look into infinite dimensionality with infinite roads to see if the path integral is emergent or with roads of infinite speeds for a more mathematical approach to finding limits of directionality.</p>
+
+  <p>Fundamentally, the question seems significant to others as it can help those who are lost; however, I suspect it's a red herring as human ingenuity tends to trump mathematical analysis in real world scenarios. Some examples are following streams, listening for cars, or finding elevation. Time is one of our most finite resources, but is it philosophically flawed to optimize every second for its greatest potential within reality?</p>
+
+  <div class="footnote">
+    <p>*Road Jumps is the strategy to leave a road in order to join another road to optimize for the total time even with the slower walk speed between paths.</p>
+  </div>
+</div>
