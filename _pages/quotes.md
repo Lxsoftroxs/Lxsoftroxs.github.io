@@ -9,6 +9,9 @@ permalink: /quotes/
 — My mother
 
 
+“Life is far too important a thing ever to talk seriously about.”                                                      
+― Oscar Wilde, Lady Windermere's Fan 
+
 "The truly creative mind in any field is no more than this: A human creature born abnormally, inhumanly sensitive. To him... a touch is a blow, a sound is a noise, a misfortune is a tragedy, a joy is an ecstasy, a friend is a lover, a lover is a god, and failure is death. Add to this cruelly delicate organism the overpowering necessity to create, create, create -- so that without the creating of music or poetry or books or buildings or something of meaning, his very breath is cut off from him. He must create, must pour out creation. By some strange, unknown, inward urgency he is not really alive unless he is creating"                                         
 — Pearl S. Buck
 
