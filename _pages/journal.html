@@ -1,0 +1,26 @@
+---
+layout: page
+title: Daily Entries
+permalink: /journal/
+---
+
+<h1>Daily Journal</h1>
+<p>My daily thoughts, reflections, and experiences.</p>
+
+<hr>
+
+{% if site.journal.size > 0 %}
+<ul class="journal-list">
+  {% for entry in site.journal reversed %}
+    <li>
+      <h2><a href="{{ entry.url | relative_url }}">{{ entry.title }}</a></h2>
+      <span class="date">{{ entry.date | date: "%B %-d, %Y" }}</span>
+      {% if entry.excerpt %}
+        <p class="excerpt">{{ entry.excerpt | strip_html | truncatewords: 20 }}</p>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No journal entries yet. Use the admin panel to create your first entry!</p>
+{% endif %}

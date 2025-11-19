@@ -1,0 +1,23 @@
+---
+layout: page
+title: Poetry
+permalink: /poetry/
+---
+
+<h1>Poetry Collection</h1>
+<p>A collection of my poetic works and creative expressions.</p>
+
+<hr>
+
+{% if site.poetry.size > 0 %}
+<ul class="poetry-list">
+  {% for poem in site.poetry reversed %}
+    <li>
+      <h2><a href="{{ poem.url | relative_url }}">{{ poem.title }}</a></h2>
+      <span class="date">{{ poem.date | date: "%B %-d, %Y" }}</span>
+    </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No poetry entries yet. Use the admin panel to create your first poem!</p>
+{% endif %}

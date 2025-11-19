@@ -1,0 +1,67 @@
+# Site Configuration
+title: "My Blog"
+description: "A customizable blog with a dark, neon aesthetic"
+baseurl: ""
+url: "https://yourusername.github.io"
+
+# Author info (edit these!)
+author:
+  name: "Your Name"
+  email: "your.email@example.com"
+
+# Collections
+collections:
+  journal:
+    output: true
+    permalink: /journal/:title/
+  poetry:
+    output: true
+    permalink: /poetry/:title/
+  pages:
+    output: true
+    permalink: /:path/
+
+# Theme customization - Edit these colors!
+theme:
+  primary_color: "#6df"      # Cyan - main accent color
+  background: "#111"          # Dark background
+  secondary_bg: "#222"        # Slightly lighter background
+  container_bg: "#1a1a1a"    # Container background
+  text_color: "#ddd"          # Light text
+  muted_text: "#999"          # Muted/meta text
+  border_color: "#444"        # Border color
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: ""
+      type: "journal"
+    values:
+      layout: "post"
+  - scope:
+      path: ""
+      type: "poetry"
+    values:
+      layout: "post"
+
+# Build settings
+markdown: kramdown
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Exclude from build
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .bundle
+  - .git
+  - .github

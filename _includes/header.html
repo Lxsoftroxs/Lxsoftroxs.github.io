@@ -1,0 +1,46 @@
+<header class="site-header">
+  <div class="header-inner">
+    <h1 class="site-title">{{ site.title }}</h1>
+    <nav class="site-nav">
+      <div class="site-nav-dropdown">
+        <label for="site-nav-select" class="sr-only">Navigate to</label>
+        <select id="site-nav-select" class="nav-select">
+          <option value="" disabled selected>Navigate to…</option>
+          <option value="{{ '/' | relative_url }}">Home</option>
+          <option value="{{ '/about/' | relative_url }}">About</option>
+          <option value="{{ '/poetry/' | relative_url }}">Poetry</option>
+          <option value="{{ '/journal/' | relative_url }}">Daily Entries</option>
+        </select>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var select = document.getElementById('site-nav-select');
+    if (!select) return;
+
+    var currentPath = window.location.pathname.replace(/index.html$/, '');
+    var found = false;
+
+    for (var i = 0; i < select.options.length; i++) {
+      if (select.options[i].value === currentPath) {
+        select.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      select.selectedIndex = 0;
+    }
+
+    select.addEventListener('change', function () {
+      var target = this.value;
+      if (target) {
+        window.location.href = target;
+      }
+    });
+  });
+</script>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+  <title>{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}</title>
+
+  <!-- CSS Variables for easy theming -->
+  <style>
+    :root {
+      --primary-color: {{ site.theme.primary_color }};
+      --background: {{ site.theme.background }};
+      --secondary-bg: {{ site.theme.secondary_bg }};
+      --container-bg: {{ site.theme.container_bg }};
+      --text-color: {{ site.theme.text_color }};
+      --muted-text: {{ site.theme.muted_text }};
+      --border-color: {{ site.theme.border_color }};
+    }
+
+    /* Critical CSS to prevent flash of unstyled content */
+    .no-flash { visibility: hidden; }
+    body {
+      background-color: var(--background);
+      color: var(--text-color);
+      font-family: 'Courier New', Courier, monospace;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    .site-header {
+      background-color: var(--secondary-bg);
+      border-bottom: 3px solid var(--primary-color);
+      padding: 20px;
+    }
+    .site-footer {
+      background-color: var(--secondary-bg);
+      border-top: 3px solid var(--primary-color);
+      font-size: 0.8em;
+      color: #666;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: var(--container-bg);
+      border-radius: 8px;
+      box-shadow: 0 0 10px #000;
+    }
+  </style>
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+</head>
+<body class="no-flash">
+  {% include header.html %}
+  <div class="container">
+    {{ content }}
+  </div>
+  {% include footer.html %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      document.body.classList.remove("no-flash");
+    });
+  </script>
+</body>
+</html>

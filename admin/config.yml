@@ -1,0 +1,87 @@
+backend:
+  name: git-gateway
+  branch: main # or master, depending on your default branch
+
+# Uncomment below to enable drafts
+# publish_mode: editorial_workflow
+
+media_folder: "assets/images/uploads" # Where media files will be stored
+public_folder: "/assets/images/uploads" # The src attribute for uploaded media
+
+collections:
+  # Blog Posts
+  - name: "blog"
+    label: "Blog Posts"
+    folder: "_posts"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - { label: "Layout", name: "layout", widget: "hidden", default: "post" }
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Publish Date", name: "date", widget: "datetime" }
+      - { label: "Body", name: "body", widget: "markdown" }
+
+  # Poetry Collection
+  - name: "poetry"
+    label: "Poetry"
+    folder: "_poetry"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - { label: "Layout", name: "layout", widget: "hidden", default: "post" }
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Date", name: "date", widget: "datetime" }
+      - { label: "Body", name: "body", widget: "markdown" }
+
+  # Journal Entries
+  - name: "journal"
+    label: "Daily Entries"
+    folder: "_journal"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - { label: "Layout", name: "layout", widget: "hidden", default: "post" }
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Date", name: "date", widget: "datetime" }
+      - { label: "Body", name: "body", widget: "markdown" }
+
+  # Pages
+  - name: "pages"
+    label: "Pages"
+    folder: "_pages"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Layout", name: "layout", widget: "select", options: ["page", "post"], default: "page" }
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Permalink", name: "permalink", widget: "string" }
+      - { label: "Body", name: "body", widget: "markdown" }
+
+  # Site Settings
+  - name: "settings"
+    label: "Site Settings"
+    files:
+      - label: "Configuration"
+        name: "config"
+        file: "_config.yml"
+        fields:
+          - { label: "Site Title", name: "title", widget: "string" }
+          - { label: "Description", name: "description", widget: "text" }
+          - { label: "Site URL", name: "url", widget: "string" }
+          - label: "Author"
+            name: "author"
+            widget: "object"
+            fields:
+              - { label: "Name", name: "name", widget: "string" }
+              - { label: "Email", name: "email", widget: "string" }
+          - label: "Theme Colors"
+            name: "theme"
+            widget: "object"
+            fields:
+              - { label: "Primary Color (hex)", name: "primary_color", widget: "string", default: "#6df", pattern: ['^#[0-9a-fA-F]{3,6}$', 'Must be a valid hex color'] }
+              - { label: "Background (hex)", name: "background", widget: "string", default: "#111", pattern: ['^#[0-9a-fA-F]{3,6}$', 'Must be a valid hex color'] }
+              - { label: "Secondary Background (hex)", name: "secondary_bg", widget: "string", default: "#222", pattern: ['^#[0-9a-fA-F]{3,6}$', 'Must be a valid hex color'] }
+              - { label: "Container Background (hex)", name: "container_bg", widget: "string", default: "#1a1a1a", pattern: ['^#[0-9a-fA-F]{3,6}$', 'Must be a valid hex color'] }
+              - { label: "Text Color (hex)", name: "text_color", widget: "string", default: "#ddd", pattern: ['^#[0-9a-fA-F]{3,6}$', 'Must be a valid hex color'] }
+              - { label: "Muted Text (hex)", name: "muted_text", widget: "string", default: "#999", pattern: ['^#[0-9a-fA-F]{3,6}$', 'Must be a valid hex color'] }
+              - { label: "Border Color (hex)", name: "border_color", widget: "string", default: "#444", pattern: ['^#[0-9a-fA-F]{3,6}$', 'Must be a valid hex color'] }
