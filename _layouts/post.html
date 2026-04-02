@@ -4,7 +4,16 @@ layout: default
 <article class="post">
   <h1>{{ page.title }}</h1>
   <p class="post-meta">Posted on {{ page.date | date: "%B %-d, %Y" }}</p>
-  <div class="post-content">
+
+  <section class="interactive-flow" aria-label="Interactive text flow demo">
+    <div class="interactive-flow-header">
+      <strong>Interactive flow objects</strong>
+      <button type="button" class="flow-reset" data-flow-reset>Reset objects</button>
+    </div>
+    <p class="interactive-flow-hint">Drag the circles. The post text wraps around them live.</p>
+  </section>
+
+  <div class="post-content" data-flow-content>
     {{ content }}
   </div>
 </article>
