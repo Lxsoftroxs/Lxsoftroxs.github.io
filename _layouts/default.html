@@ -9,6 +9,18 @@
   <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>{{ page.title }} - {{ site.title }}</title>
+  <meta name="description" content="{{ page.excerpt | default: site.description | strip_html | strip_newlines | truncate: 155 }}">
+  <meta property="og:title" content="{{ page.title }} - {{ site.title }}">
+  <meta property="og:description" content="{{ page.excerpt | default: site.description | strip_html | strip_newlines | truncate: 200 }}">
+  <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}">
+  <meta property="og:url" content="{{ page.url | absolute_url }}">
+  <meta property="og:image" content="{{ page.image | default: '/assets/images/gallery/20250610_12370213.jpg' | absolute_url }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page.title }} - {{ site.title }}">
+  <meta name="twitter:description" content="{{ page.excerpt | default: site.description | strip_html | strip_newlines | truncate: 200 }}">
+  <meta name="twitter:image" content="{{ page.image | default: '/assets/images/gallery/20250610_12370213.jpg' | absolute_url }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <style>
     /* Critical CSS to prevent flash of unstyled content */
     .no-flash { visibility: hidden; }
@@ -50,6 +62,8 @@
     {{ content }}
   </div>
   {% include footer.html %}
+  <script defer src="{{ '/assets/js/site-optimizations.js' | relative_url }}"></script>
+  <script defer src="{{ '/assets/js/pretext-flow.js' | relative_url }}"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       document.body.classList.remove("no-flash");

@@ -451,4 +451,35 @@ a:hover {
   color: #ddd;
 }
 
+/* Performance and text-flow enhancements */
+.post,
+.page,
+article {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 700px;
+}
 
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.flow-mirror-ball {
+  --size: 86px;
+  width: var(--size);
+  height: var(--size);
+  float: left;
+  border-radius: 50%;
+  margin: 0 14px 10px 0;
+  shape-outside: circle(50%);
+  shape-margin: 10px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.35) 15%, rgba(255, 255, 255, 0.05) 32%, rgba(0, 0, 0, 0.08) 52%, rgba(0, 0, 0, 0.36) 100%),
+    radial-gradient(circle at 72% 72%, rgba(110, 180, 255, 0.4), rgba(9, 23, 44, 0.6) 65%, rgba(3, 10, 22, 0.95) 100%);
+  border: 1px solid rgba(200, 230, 255, 0.7);
+  box-shadow:
+    inset -10px -15px 25px rgba(4, 8, 18, 0.5),
+    inset 8px 12px 18px rgba(255, 255, 255, 0.15),
+    0 8px 16px rgba(0, 0, 0, 0.45);
+}
