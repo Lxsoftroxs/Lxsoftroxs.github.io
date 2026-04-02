@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://Lxsoftroxs.github.io/sitemap.xml

@@ -7,119 +7,24 @@ permalink: /journal/
 
 <!-- Month Navigation Controls -->
 <div id="calendar-controls" style="text-align:center; margin-bottom:10px;">
-  <button id="prev-month">Previous Month</button>
-  <span id="month-display" style="margin: 0 15px; font-weight:bold;"></span>
-  <button id="next-month">Next Month</button>
+  <button id="prev-month" aria-label="Previous month">Previous Month</button>
+  <span id="month-display" style="margin: 0 15px; font-weight:bold;" aria-live="polite"></span>
+  <button id="next-month" aria-label="Next month">Next Month</button>
 </div>
 
-<div id="calendar"></div>
+<div id="calendar" role="region" aria-label="Journal calendar" style="overflow-x: auto;"></div>
 
-<script>
-  // Build an array of journal entries from your _journal collection using Liquid.
-  // Each entry includes its date (formatted as YYYY-MM-DD), title, and URL.
-  var journalEntries = [
+<!-- Journal entry data injected by Jekyll; consumed by journal-calendar.js -->
+<script type="application/json" id="journal-data">
+[
   {% for entry in site.journal %}
-    {
-      "date": "{{ entry.date | date: '%Y-%m-%d' }}",
-      "title": "{{ entry.title | escape }}",
-      "url": "{{ entry.url | relative_url }}"
-    }{% unless forloop.last %},{% endunless %}
+  {
+    "date": "{{ entry.date | date: '%Y-%m-%d' }}",
+    "title": "{{ entry.title | escape }}",
+    "url": "{{ entry.url | relative_url }}"
+  }{% unless forloop.last %},{% endunless %}
   {% endfor %}
-  ];
-
-  // Global variables for current displayed month (0-indexed) and year.
-  var today = new Date();
-  var currentYear = today.getFullYear();
-  var currentMonth = today.getMonth();
-
-  // Build a calendar for a given year and month.
-  function buildCalendar(year, month) {
-    var calendarDiv = document.getElementById('calendar');
-    calendarDiv.innerHTML = ''; // Clear previous calendar.
-    var table = document.createElement('table');
-    table.style.margin = '0 auto';
-    table.style.borderCollapse = 'collapse';
-    table.style.width = '80%';
-    table.style.maxWidth = '600px';
-
-    // Days of the week header.
-    var daysOfWeek = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var headerRow = document.createElement('tr');
-    daysOfWeek.forEach(function(day) {
-      var th = document.createElement('th');
-      th.textContent = day;
-      th.style.border = '1px solid #666';
-      th.style.padding = '5px';
-      headerRow.appendChild(th);
-    });
-    table.appendChild(headerRow);
-
-    // Update the month display.
-    var monthDisplay = document.getElementById('month-display');
-    var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    monthDisplay.textContent = monthNames[month] + ' ' + year;
-
-    // Determine first day and number of days in the month.
-    var firstDay = new Date(year, month, 1);
-    var startingDay = firstDay.getDay();
-    var daysInMonth = new Date(year, month + 1, 0).getDate();
-    var date = 1;
-
-    // Create 6 rows (weeks) in the calendar.
-    for (var i = 0; i < 6; i++) {
-      var row = document.createElement('tr');
-      for (var j = 0; j < 7; j++) {
-        var cell = document.createElement('td');
-        cell.style.border = '1px solid #666';
-        cell.style.padding = '10px';
-        cell.style.textAlign = 'center';
-        if (i === 0 && j < startingDay) {
-          cell.textContent = '';
-        } else if (date > daysInMonth) {
-          cell.textContent = '';
-        } else {
-          cell.textContent = date;
-          var cellDate = year + '-' + (month + 1).toString().padStart(2, '0') + '-' + date.toString().padStart(2, '0');
-          // Check if there's a journal entry for this date.
-          var entry = journalEntries.find(e => e.date === cellDate);
-          if (entry) {
-            cell.style.backgroundColor = '#444';
-            cell.style.cursor = 'pointer';
-            cell.title = entry.title;
-            // On click, redirect to the entry's page.
-            cell.addEventListener('click', (function(entryCopy) {
-              return function(e) {
-                window.location.href = entryCopy.url;
-              };
-            })(entry));
-          }
-          date++;
-        }
-        row.appendChild(cell);
-      }
-      table.appendChild(row);
-    }
-    calendarDiv.appendChild(table);
-  }
-
-  // Event listeners for previous and next month buttons.
-  document.getElementById('prev-month').addEventListener('click', function() {
-    currentMonth--;
-    if (currentMonth < 0) {
-      currentMonth = 11;
-      currentYear--;
-    }
-    buildCalendar(currentYear, currentMonth);
-  });
-  document.getElementById('next-month').addEventListener('click', function() {
-    currentMonth++;
-    if (currentMonth > 11) {
-      currentMonth = 0;
-      currentYear++;
-    }
-    buildCalendar(currentYear, currentMonth);
-  });
-
-  // Initially build the calendar for the current month.
-  buildCalendar(currentYear, currentMonth);
+]
 </script>
+
+<script defer src="{{ '/assets/js/journal-calendar.js' | relative_url }}"></script>

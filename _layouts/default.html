@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Content Security Policy for XSS Protection -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://utteranc.es https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://utteranc.es https://api.github.com https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app; frame-src https://utteranc.es;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://utteranc.es; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://utteranc.es https://api.github.com https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app; frame-src https://utteranc.es;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
   <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -21,53 +21,19 @@
   <meta name="twitter:image" content="{{ page.image | default: '/assets/images/gallery/20250610_12370213.jpg' | absolute_url }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <style>
-    /* Critical CSS to prevent flash of unstyled content */
-    .no-flash { visibility: hidden; }
-    body {
-      background-color: #111;
-      color: #ddd;
-      font-family: 'Courier New', Courier, monospace;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    .site-header, .site-footer, .container {
-      padding: 20px;
-    }
-    .site-header {
-      background-color: #222;
-      border-bottom: 3px solid #6df;
-    }
-    .site-footer {
-      background-color: #222;
-      border-top: 3px solid #6df;
-      font-size: 0.8em;
-      color: #666;
-    }
-    .container {
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 20px;
-      background-color: #1a1a1a;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #000;
-    }
-  </style>
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
 </head>
 <body class="no-flash">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   {% include header.html %}
-  <div class="container">
+  <div id="main-content" class="container">
     {{ content }}
   </div>
   {% include footer.html %}
   <script defer src="{{ '/assets/js/site-optimizations.js' | relative_url }}"></script>
   <script defer src="{{ '/assets/js/pretext-flow.js' | relative_url }}"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      document.body.classList.remove("no-flash");
-    });
-  </script>
+  <script defer src="{{ '/assets/js/no-flash.js' | relative_url }}"></script>
+  <script defer src="{{ '/assets/js/nav.js' | relative_url }}"></script>
+  <script defer src="{{ '/assets/js/footer-subscribe.js' | relative_url }}"></script>
 </body>
 </html>
