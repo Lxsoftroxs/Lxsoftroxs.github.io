@@ -10,16 +10,16 @@
 
   function optimizeImages() {
     const allImages = Array.from(document.querySelectorAll('img'));
+    const foldLimit = Math.max(window.innerHeight * 1.2, 900);
 
-    // Default all images to low-priority lazy loading
+    // Baseline defaults for broad browser support.
     allImages.forEach(function (img) {
       if (!img.hasAttribute('loading'))       img.setAttribute('loading', 'lazy');
       if (!img.hasAttribute('decoding'))      img.setAttribute('decoding', 'async');
-      if (!img.hasAttribute('fetchpriority')) img.setAttribute('fetchpriority', 'low');
+      if (!img.hasAttribute('fetchpriority')) img.setAttribute('fetchpriority', 'auto');
     });
 
-    // Priority Hints: first 3 in-content images get high priority + eager load.
-    // This directly improves Largest Contentful Paint (LCP).
+    // Prioritize in-view content images and keep off-screen images deferred.
     const prioritySelectors = [
       '.post-content img',
       '.page-content img',
@@ -27,7 +27,13 @@
       '.diary-gallery img',
     ].join(', ');
 
-    const priorityImages = Array.from(document.querySelectorAll(prioritySelectors)).slice(0, 3);
+    const priorityImages = Array.from(document.querySelectorAll(prioritySelectors))
+      .filter(function (img) {
+        const r = img.getBoundingClientRect();
+        return r.top < foldLimit && r.bottom > -200;
+      })
+      .slice(0, 3);
+
     priorityImages.forEach(function (img) {
       img.setAttribute('loading', 'eager');
       img.setAttribute('fetchpriority', 'high');

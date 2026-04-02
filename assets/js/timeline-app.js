@@ -135,6 +135,10 @@
           image.src = img;
           image.alt = 'Memory';
           image.loading = 'lazy';
+          image.decoding = 'async';
+          image.fetchPriority = 'low';
+          image.width = 150;
+          image.height = 150;
           media.appendChild(image);
         });
         content.appendChild(media);
