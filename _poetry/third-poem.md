@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: poetry
 title: "A photo"
 date: 2023-12-23
 ---

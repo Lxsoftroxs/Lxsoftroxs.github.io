@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: poetry
 title: "The Train"
 date: 2025-03-15
 ---

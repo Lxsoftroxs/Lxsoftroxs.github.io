@@ -1,0 +1,22 @@
+---
+layout: default
+---
+<article class="post poetry-post">
+  <h1>{{ page.title }}</h1>
+  <p class="post-meta">Posted on {{ page.date | date: "%B %-d, %Y" }}</p>
+  <div class="poetry-life" data-poem>
+    <div class="poem-source">{{ content }}</div>
+    <canvas class="life-canvas"></canvas>
+    <p class="life-hint">click to reset &middot; hover to pause</p>
+  </div>
+</article>
+<hr>
+<section id="comments">
+  <script src="https://utteranc.es/client.js"
+          repo="lxsoftroxs/lxsoftroxs.github.io"
+          issue-term="pathname"
+          theme="github-dark"
+          crossorigin="anonymous"
+          async>
+  </script>
+</section>
