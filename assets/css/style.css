@@ -476,7 +476,7 @@ a:hover {
 /* Performance and text-flow enhancements */
 .post,
 .page {
-  contain: layout paint style;
+  contain: style;
 }
 
 img {
