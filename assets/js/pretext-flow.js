@@ -22,7 +22,13 @@
 
     function applyPosition() {
       rafId = null;
-      const maxX = Math.max(0, content.clientWidth - mirrorBall.offsetWidth - 8);
+      // Cap X to ~45% of content width so the ball stays on the left half.
+      // float:left needs text space to its right — pushing past the midpoint
+      // leaves no room and text falls below instead of wrapping alongside.
+      const maxX = Math.max(0, Math.min(
+        content.clientWidth * 0.45 - mirrorBall.offsetWidth,
+        content.clientWidth - mirrorBall.offsetWidth - 8
+      ));
       const maxY = Math.max(0, content.scrollHeight - mirrorBall.offsetHeight);
 
       const clampedX = clamp(targetX, 0, maxX);
