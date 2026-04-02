@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: poetry
 title: "Sandals"
 date: 2025-04-11
 ---
