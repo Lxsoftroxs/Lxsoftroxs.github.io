@@ -11,7 +11,15 @@ permalink: /gallery/
   {% for image in gallery_images %}
     {% if image.path contains '.jpg' or image.path contains '.png' or image.path contains '.gif' %}
       <figure>
-        <img src="{{ image.path | relative_url }}" alt="{{ image.name }}" loading="lazy" decoding="async">
+        <img
+          class="js-lazy-image"
+          src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+          data-src="{{ image.path | relative_url }}"
+          alt="{{ image.name }}"
+          loading="lazy"
+          decoding="async"
+          width="200"
+          height="200">
         <figcaption>{{ image.name }}</figcaption>
       </figure>
     {% endif %}

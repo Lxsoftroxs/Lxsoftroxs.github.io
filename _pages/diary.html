@@ -11,7 +11,15 @@ permalink: /diary/
     {% assign photos = site.data.diary_photos %}
     {% for p in photos %}
     <figure class="polaroid" data-id="{{ p.id }}">
-      <img src="{{ p.src }}" alt="{{ p.caption }}" loading="lazy" decoding="async">
+      <img
+        class="js-lazy-image"
+        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+        data-src="{{ p.src }}"
+        alt="{{ p.caption }}"
+        loading="lazy"
+        decoding="async"
+        width="360"
+        height="360">
       <figcaption>{{ p.caption }}</figcaption>
       <button class="like" type="button">❤ <span class="count">0</span></button>
     </figure>

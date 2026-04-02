@@ -451,8 +451,6 @@ a:hover {
   color: #ddd;
 }
 
-
-
 /* Performance and text-flow enhancements */
 .post,
 .page,
@@ -466,88 +464,22 @@ img {
   height: auto;
 }
 
-.interactive-flow {
-  margin: 0 0 18px;
-  padding: 12px;
-  border: 1px solid #2f4a54;
-  border-radius: 8px;
-  background: rgba(109, 221, 255, 0.06);
-  text-align: left;
-}
-
-.interactive-flow-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.flow-reset {
-  background: #19343f;
-  border: 1px solid #6df;
-  color: #d9f8ff;
-  font-family: inherit;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.flow-reset:hover {
-  background: #245061;
-}
-
-.interactive-flow-hint {
-  margin: 8px 0 0;
-  font-size: 0.9rem;
-  color: #a9d7e4;
-}
-
-.flow-object {
-  --size: 130px;
+.flow-mirror-ball {
+  --size: 86px;
   width: var(--size);
   height: var(--size);
-  border-radius: 999px;
-  cursor: grab;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  border: 2px dashed rgba(255, 255, 255, 0.78);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45);
-  margin-bottom: 10px;
-  shape-outside: circle(50%);
-  shape-margin: 12px;
-}
-
-.flow-object:active {
-  cursor: grabbing;
-}
-
-.flow-object-left {
   float: left;
-  margin-right: 14px;
-  background: radial-gradient(circle at 25% 20%, #ffd08d, #d17b00 62%, #7f4700 100%);
-}
-
-.flow-object-right {
-  float: right;
-  margin-left: 14px;
-  background: radial-gradient(circle at 25% 20%, #b6d6ff, #367dd8 62%, #0f2f5b 100%);
-}
-
-.flow-object-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  color: #fff;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.flow-status {
-  margin-top: 10px;
-  color: #9bc3ce;
-  font-size: 0.85rem;
+  border-radius: 50%;
+  margin: 0 14px 10px 0;
+  shape-outside: circle(50%);
+  shape-margin: 10px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.35) 15%, rgba(255, 255, 255, 0.05) 32%, rgba(0, 0, 0, 0.08) 52%, rgba(0, 0, 0, 0.36) 100%),
+    radial-gradient(circle at 72% 72%, rgba(110, 180, 255, 0.4), rgba(9, 23, 44, 0.6) 65%, rgba(3, 10, 22, 0.95) 100%);
+  border: 1px solid rgba(200, 230, 255, 0.7);
+  box-shadow:
+    inset -10px -15px 25px rgba(4, 8, 18, 0.5),
+    inset 8px 12px 18px rgba(255, 255, 255, 0.15),
+    0 8px 16px rgba(0, 0, 0, 0.45);
 }
