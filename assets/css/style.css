@@ -483,15 +483,13 @@ img {
   height: auto;
 }
 
+/* Spacer floats (created in JS) own shape-outside geometry.
+   This element is purely visual; position:absolute is set by JS. */
 .flow-mirror-ball {
   --size: 86px;
   width: var(--size);
   height: var(--size);
-  float: left;
   border-radius: 50%;
-  margin: 0 14px 10px 0;
-  shape-outside: circle(50%);
-  shape-margin: 10px;
   pointer-events: none;
   background:
     radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.35) 15%, rgba(255, 255, 255, 0.05) 32%, rgba(0, 0, 0, 0.08) 52%, rgba(0, 0, 0, 0.36) 100%),
@@ -501,6 +499,20 @@ img {
     inset -10px -15px 25px rgba(4, 8, 18, 0.5),
     inset 8px 12px 18px rgba(255, 255, 255, 0.15),
     0 8px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* ============================================================
+   content-visibility: skip off-screen rendering for grids
+   contain-intrinsic-size prevents scroll-height collapse
+   ============================================================ */
+.polaroid {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+
+.gallery figure {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 230px;
 }
 
 /* ============================================================

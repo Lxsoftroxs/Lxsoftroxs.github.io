@@ -6,26 +6,13 @@ permalink: /diary/
 
 <div class="diary-page">
   <h1 class="diary-title">Diary Photos</h1>
-
-  <div class="diary-gallery">
-    {% assign photos = site.data.diary_photos %}
-    {% for p in photos %}
-    <figure class="polaroid" data-id="{{ p.id }}">
-      <img
-        class="js-lazy-image"
-        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-        data-src="{{ p.src }}"
-        alt="{{ p.caption }}"
-        loading="lazy"
-        decoding="async"
-        width="360"
-        height="360">
-      <figcaption>{{ p.caption }}</figcaption>
-      <button class="like" type="button">❤ <span class="count">0</span></button>
-    </figure>
-    {% endfor %}
-  </div>
+  <div class="diary-gallery" id="diary-gallery" aria-label="Diary photo gallery"></div>
 </div>
 
+<!-- Photo metadata injected at build time; diary-virtual.js renders on demand -->
+<script type="application/json" id="diary-data">
+[{% for p in site.data.diary_photos %}{"id":"{{ p.id }}","src":"{{ p.src | relative_url }}","caption":"{{ p.caption | escape }}"}{% unless forloop.last %},{% endunless %}{% endfor %}]
+</script>
+
 <script defer src="{{ '/assets/js/diary.js' | relative_url }}"></script>
-<script defer src="{{ '/assets/js/diary-pagination.js' | relative_url }}"></script>
+<script defer src="{{ '/assets/js/diary-virtual.js' | relative_url }}"></script>
