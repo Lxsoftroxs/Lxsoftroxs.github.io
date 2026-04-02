@@ -7,16 +7,25 @@ document.addEventListener('DOMContentLoaded', function() {
   const commentText = document.getElementById('comment-text');
   const charCount = document.getElementById('char-count');
 
-  // Character counter
+  // Character counter — color + text so color-blind users still get the warning
+  const charWarning = document.createElement('span');
+  charWarning.setAttribute('aria-live', 'polite');
+  charWarning.style.marginLeft = '0.5rem';
+  charWarning.style.fontSize = '0.8rem';
+  charCount.parentNode.appendChild(charWarning);
+
   commentText.addEventListener('input', function() {
     const length = this.value.length;
     charCount.textContent = length;
     if (length >= 1000) {
       charCount.style.color = '#ff6b6b';
+      charWarning.textContent = '(limit reached)';
     } else if (length >= 800) {
       charCount.style.color = '#ffa500';
+      charWarning.textContent = '(approaching limit)';
     } else {
       charCount.style.color = '#888';
+      charWarning.textContent = '';
     }
   });
 
