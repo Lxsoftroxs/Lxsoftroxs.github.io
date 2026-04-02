@@ -2,14 +2,15 @@
   var dataEl = document.getElementById('timeline-data');
   if (!dataEl) return;
   var timelineData = JSON.parse(dataEl.textContent);
+  var ascending = true;
 
-  function sortEvents(ascending) {
-    return timelineData.sort(function(a, b) {
+  function sortEvents(events, asc) {
+    return events.slice().sort(function(a, b) {
       var partsA = a.date.split('-');
       var dateA = new Date(partsA[0], partsA[1] - 1, partsA[2]);
       var partsB = b.date.split('-');
       var dateB = new Date(partsB[0], partsB[1] - 1, partsB[2]);
-      return ascending ? dateA - dateB : dateB - dateA;
+      return asc ? dateA - dateB : dateB - dateA;
     });
   }
 
@@ -47,7 +48,10 @@
     container.innerHTML = '';
 
     if (events.length === 0) {
-      container.innerHTML = '<div class="timeline-empty">No events found matching your criteria</div>';
+      var empty = document.createElement('div');
+      empty.className = 'timeline-empty';
+      empty.textContent = 'No events found matching your criteria';
+      container.appendChild(empty);
       return;
     }
 
@@ -76,41 +80,79 @@
         year: 'numeric', month: 'short', day: 'numeric'
       });
 
-      var html = '<div class="timeline-date">' + dateStr + '</div>' +
-        '<span class="timeline-category">' + event.category + '</span>' +
-        (event.age ? '<span class="timeline-age">Age ' + event.age + '</span>' : '') +
-        '<h3 class="timeline-title">' + event.title + '</h3>' +
-        '<div class="timeline-summary">' + event.summary + '</div>';
+      var date = document.createElement('div');
+      date.className = 'timeline-date';
+      date.textContent = dateStr;
+      content.appendChild(date);
+
+      var category = document.createElement('span');
+      category.className = 'timeline-category';
+      category.textContent = event.category || '';
+      content.appendChild(category);
+
+      if (event.age) {
+        var age = document.createElement('span');
+        age.className = 'timeline-age';
+        age.textContent = 'Age ' + event.age;
+        content.appendChild(age);
+      }
+
+      var title = document.createElement('h3');
+      title.className = 'timeline-title';
+      title.textContent = event.title || '';
+      content.appendChild(title);
+
+      var summary = document.createElement('div');
+      summary.className = 'timeline-summary';
+      summary.textContent = event.summary || '';
+      content.appendChild(summary);
 
       if (event.details) {
-        html += '<div class="timeline-details">' + event.details + '</div>';
+        var details = document.createElement('div');
+        details.className = 'timeline-details';
+        details.textContent = event.details;
+        content.appendChild(details);
       }
 
       if (event.people && event.people.length > 0) {
-        html += '<div class="timeline-people">';
+        var people = document.createElement('div');
+        people.className = 'timeline-people';
         event.people.forEach(function(person) {
-          html += '<span class="person-tag" tabindex="0">' + person + '</span>';
+          var tag = document.createElement('span');
+          tag.className = 'person-tag';
+          tag.setAttribute('tabindex', '0');
+          tag.textContent = person;
+          people.appendChild(tag);
         });
-        html += '</div>';
+        content.appendChild(people);
       }
 
       if (event.media && event.media.length > 0) {
-        html += '<div class="timeline-media">';
+        var media = document.createElement('div');
+        media.className = 'timeline-media';
         event.media.forEach(function(img) {
-          html += '<img src="' + img + '" alt="Memory" loading="lazy">';
+          var image = document.createElement('img');
+          image.src = img;
+          image.alt = 'Memory';
+          image.loading = 'lazy';
+          media.appendChild(image);
         });
-        html += '</div>';
+        content.appendChild(media);
       }
 
       if (event.notes) {
-        html += '<div class="timeline-notes">' + event.notes + '</div>';
+        var notes = document.createElement('div');
+        notes.className = 'timeline-notes';
+        notes.textContent = event.notes;
+        content.appendChild(notes);
       }
 
       if (event.connections && event.connections.length > 0) {
-        html += '<div class="timeline-connections">' + event.connections.join(', ') + '</div>';
+        var connections = document.createElement('div');
+        connections.className = 'timeline-connections';
+        connections.textContent = event.connections.join(', ');
+        content.appendChild(connections);
       }
-
-      content.innerHTML = html;
 
       function toggleExpand() {
         var expanded = content.classList.toggle('expanded');
@@ -150,7 +192,16 @@
   function getFiltered() {
     var searchTerm = document.getElementById('timeline-search').value;
     var category = document.getElementById('category-filter').value;
-    return filterEvents(searchTerm, category);
+    return sortEvents(filterEvents(searchTerm, category), ascending);
+  }
+
+  function setSortButtons() {
+    var ascBtn = document.getElementById('sort-asc');
+    var descBtn = document.getElementById('sort-desc');
+    ascBtn.classList.toggle('active', ascending);
+    descBtn.classList.toggle('active', !ascending);
+    ascBtn.setAttribute('aria-pressed', ascending ? 'true' : 'false');
+    descBtn.setAttribute('aria-pressed', ascending ? 'false' : 'true');
   }
 
   document.getElementById('timeline-search').addEventListener('input', function() {
@@ -166,28 +217,28 @@
   });
 
   document.getElementById('sort-asc').addEventListener('click', function() {
-    this.classList.add('active');
-    document.getElementById('sort-desc').classList.remove('active');
-    sortEvents(true);
+    ascending = true;
+    setSortButtons();
     renderTimeline(getFiltered());
   });
 
   document.getElementById('sort-desc').addEventListener('click', function() {
-    this.classList.add('active');
-    document.getElementById('sort-asc').classList.remove('active');
-    sortEvents(false);
+    ascending = false;
+    setSortButtons();
     renderTimeline(getFiltered());
   });
 
   document.getElementById('show-all').addEventListener('click', function() {
     document.getElementById('timeline-search').value = '';
     document.getElementById('category-filter').value = 'all';
-    renderTimeline(timelineData);
-    updateStats(timelineData);
+    var filtered = getFiltered();
+    renderTimeline(filtered);
+    updateStats(filtered);
   });
 
   // Initial render
-  sortEvents(true);
-  renderTimeline(timelineData);
-  updateStats(timelineData);
+  setSortButtons();
+  var initial = getFiltered();
+  renderTimeline(initial);
+  updateStats(initial);
 })();

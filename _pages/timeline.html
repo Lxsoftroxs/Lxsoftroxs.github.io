@@ -67,14 +67,14 @@ permalink: /timeline/
     "title": {{ event.title | jsonify }},
     "summary": {{ event.summary | jsonify }},
     "details": {{ event.details | jsonify }},
-    "category": "{{ event.category }}",
+    "category": {{ event.category | jsonify }},
     "milestone": {{ event.milestone | default: false }},
     "people": {{ event.people | jsonify | default: '[]' }},
     "location": {{ event.location | jsonify }},
     "media": {{ event.media | jsonify | default: '[]' }},
     "notes": {{ event.notes | jsonify }},
     "connections": {{ event.connections | jsonify | default: '[]' }},
-    "age": "{{ event.age }}"
+    "age": {{ event.age | jsonify }}
   }{% unless forloop.last %},{% endunless %}
   {% endfor %}
 ]

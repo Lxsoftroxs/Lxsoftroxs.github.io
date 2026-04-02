@@ -20,27 +20,66 @@
 
   function whenText(track) {
     if (track['@attr'] && track['@attr'].nowplaying) {
-      return '<span class="badge">Now Playing</span>';
+      return { text: 'Now Playing', isBadge: true };
     }
     const uts = track.date?.uts ? parseInt(track.date.uts, 10) * 1000 : null;
-    if (!uts) return '';
-    return new Date(uts).toLocaleString();
+    if (!uts) return { text: '', isBadge: false };
+    return { text: new Date(uts).toLocaleString(), isBadge: false };
   }
 
-  function rowHTML(track) {
+  function buildRow(track) {
     const artist = track.artist?.['#text'] || '';
     const title  = track.name || '';
     const url    = track.url || '#';
-    return `
-      <div class="listen-row">
-        <img alt="album art" src="${imgOf(track)}">
-        <div>
-          <div><a href="${url}" target="_blank" rel="noopener"><b>${title}</b></a></div>
-          <div class="listen-meta">${artist}</div>
-          <div class="listen-meta">${whenText(track)}</div>
-        </div>
-      </div>
-    `;
+    const time = whenText(track);
+
+    const row = document.createElement('div');
+    row.className = 'listen-row';
+
+    const image = document.createElement('img');
+    image.alt = 'album art';
+    image.src = imgOf(track);
+    row.appendChild(image);
+
+    const info = document.createElement('div');
+
+    const titleWrap = document.createElement('div');
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    const bold = document.createElement('b');
+    bold.textContent = title;
+    link.appendChild(bold);
+    titleWrap.appendChild(link);
+    info.appendChild(titleWrap);
+
+    const artistEl = document.createElement('div');
+    artistEl.className = 'listen-meta';
+    artistEl.textContent = artist;
+    info.appendChild(artistEl);
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'listen-meta';
+    if (time.isBadge) {
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = time.text;
+      timeEl.appendChild(badge);
+    } else {
+      timeEl.textContent = time.text;
+    }
+    info.appendChild(timeEl);
+
+    row.appendChild(info);
+    return row;
+  }
+
+  function renderRows(container, tracks) {
+    container.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    tracks.forEach((track) => fragment.appendChild(buildRow(track)));
+    container.appendChild(fragment);
   }
 
   async function loadRecent() {
@@ -58,21 +97,25 @@
       const np = tracks.find(t => t['@attr'] && t['@attr'].nowplaying);
       if (np) {
         $now.style.display = '';
-        $now.innerHTML = rowHTML(np);
+        renderRows($now, [np]);
       } else {
         $now.style.display = 'none';
+        $now.innerHTML = '';
       }
 
       const recent = tracks.filter(t => !(t['@attr'] && t['@attr'].nowplaying));
-      $list.innerHTML = recent.map(rowHTML).join('');
+      renderRows($list, recent);
     } catch (e) {
       clearTimeout(timeout);
       $now.style.display = '';
+      $now.innerHTML = '';
+      const message = document.createElement('div');
       if (e.name === 'AbortError') {
-        $now.innerHTML = '<div>Last.fm timed out. Try refreshing.</div>';
+        message.textContent = 'Last.fm timed out. Try refreshing.';
       } else {
-        $now.innerHTML = "<div>Couldn't load Last.fm feed.</div>";
+        message.textContent = "Couldn't load Last.fm feed.";
       }
+      $now.appendChild(message);
     }
   }
 

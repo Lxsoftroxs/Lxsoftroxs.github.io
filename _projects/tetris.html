@@ -836,7 +836,19 @@ permalink: /projects/tetris/
 
   // --- Leaderboard (global) ---
   function renderLeaderboard(list){
-    lbEl.innerHTML = (list||[]).slice(0,10).map((e,i)=>`<li>#${i+1} ${e.name} — ${e.score}</li>`).join("") || "<li>No scores yet</li>";
+    lbEl.innerHTML = "";
+    const entries = (list || []).slice(0, 10);
+    if (!entries.length) {
+      const li = document.createElement("li");
+      li.textContent = "No scores yet";
+      lbEl.appendChild(li);
+      return;
+    }
+    entries.forEach((e, i) => {
+      const li = document.createElement("li");
+      li.textContent = `#${i + 1} ${e.name} — ${e.score}`;
+      lbEl.appendChild(li);
+    });
   }
   async function fetchLeaderboard(){
     try { const r=await fetch(API_URL,{method:"GET",mode:"cors"}); const j=await r.json(); renderLeaderboard(j.leaderboard); }
