@@ -39,6 +39,11 @@
     const image = document.createElement('img');
     image.alt = 'album art';
     image.src = imgOf(track);
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.fetchPriority = 'low';
+    image.width = 64;
+    image.height = 64;
     row.appendChild(image);
 
     const info = document.createElement('div');

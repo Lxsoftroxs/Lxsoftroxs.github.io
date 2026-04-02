@@ -27,6 +27,9 @@ body {
   background-color: #111;
   color: #ddd;
   font-family: 'Courier New', Courier, monospace;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   margin: 0;
   padding: 0;
   text-align: center;
@@ -472,10 +475,8 @@ a:hover {
 
 /* Performance and text-flow enhancements */
 .post,
-.page,
-article {
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 700px;
+.page {
+  contain: layout paint style;
 }
 
 img {
