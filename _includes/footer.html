@@ -1,58 +1,11 @@
 <!-- _includes/footer.html -->
 <footer class="site-footer">
-  <form id="subscribe-form" novalidate>
+  <form id="subscribe-form" novalidate aria-label="Email subscription">
+    <label for="subscriber-email" class="sr-only">Email address</label>
     <input type="email" id="subscriber-email" placeholder="Enter your email" required>
     <!-- Honeypot for bots -->
-    <input type="text" id="website" name="website" style="display:none">
+    <input type="text" id="website" name="website" style="display:none" tabindex="-1" aria-hidden="true">
     <button type="submit">Subscribe</button>
   </form>
   <div id="subscribe-message" role="status" aria-live="polite"></div>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const form  = document.getElementById('subscribe-form');
-      if (!form) return;
-      const input = document.getElementById('subscriber-email');
-      const honey = document.getElementById('website');
-      const msg   = document.getElementById('subscribe-message');
-      const btn   = form.querySelector('button');
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = (input.value || '').trim().toLowerCase();
-
-        if (honey && honey.value) return; // bot
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-          msg.textContent = 'Please enter a valid email address.';
-          return;
-        }
-
-        btn.disabled = true;
-        msg.textContent = 'Subscribing...';
-
-        try {
-          const res = await fetch('https://subscriber-api-lolroxs.vercel.app/api/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-            mode: 'cors',
-            credentials: 'omit'
-          });
-
-          let data = null;
-          try { data = await res.json(); } catch (_) {}
-
-          if (!res.ok) throw new Error((data && data.message) || `HTTP ${res.status}`);
-
-          msg.textContent = (data && data.message) || 'Subscribed!';
-          input.value = '';
-        } catch (err) {
-          console.error(err);
-          msg.textContent = 'Subscription failed. Please try again later.';
-        } finally {
-          btn.disabled = false;
-        }
-      });
-    });
-  </script>
 </footer>
