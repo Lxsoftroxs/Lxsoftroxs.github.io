@@ -114,19 +114,21 @@
   charData = null; // free
 
   /* ── Physics constants ─────────────────────────────────────── */
-  var G           = 40;       // gravitational constant
-  var SOFTENING   = 600;      // softening term (r^2 + SOFTENING)
-  var REPULSE_R   = 8;        // repulsion cutoff distance
-  var REPULSE_K   = 3000;     // repulsion strength
-  var DAMPING     = 0.992;    // velocity damping per frame
+  var G           = 120;      // gravitational constant (pairwise)
+  var SOFTENING   = 80;       // softening term (r^2 + SOFTENING)
+  var REPULSE_R   = 12;       // repulsion cutoff distance
+  var REPULSE_K   = 2000;     // repulsion strength
+  var DAMPING     = 0.985;    // velocity damping per frame
   var HOME_BASE   = 0;        // current homing spring constant
-  var HOME_MAX    = 0.025;    // max homing spring constant
-  var MOUSE_FORCE = 8000;     // mouse attraction strength
-  var SCATTER_VEL = 6;        // velocity added on scatter-click
-  var DT          = 0.6;      // integration timestep
+  var HOME_MAX    = 0.03;     // max homing spring constant
+  var CLUSTER_K   = 0.15;     // attraction to own quote's center of mass
+  var CENTER_K    = 0.003;    // weak pull toward canvas centre (prevents escape)
+  var MOUSE_FORCE = 12000;    // mouse attraction strength
+  var SCATTER_VEL = 4;        // velocity added on scatter-click
+  var DT          = 0.5;      // integration timestep
 
   /* ── Spatial hash ──────────────────────────────────────────── */
-  var CELL = 90;
+  var CELL = 160;             // larger cells → more pairwise interactions
   var hashMap = new Map();
 
   function cellKey(cx, cy) { return (cx + 5000) * 10001 + (cy + 5000); }
@@ -143,15 +145,37 @@
     }
   }
 
+  /* ── Per-quote centre of mass (updated each frame) ─────────── */
+  var nQuotes = quotes.length;
+  var comX = new Float32Array(nQuotes);  // centre-of-mass x
+  var comY = new Float32Array(nQuotes);  // centre-of-mass y
+  var comN = new Uint16Array(nQuotes);   // count per quote
+
+  function updateCOM() {
+    comX.fill(0); comY.fill(0); comN.fill(0);
+    for (var i = 0; i < N; i++) {
+      var q = qi_arr[i];
+      comX[q] += px[i];
+      comY[q] += py[i];
+      comN[q]++;
+    }
+    for (var q = 0; q < nQuotes; q++) {
+      if (comN[q]) { comX[q] /= comN[q]; comY[q] /= comN[q]; }
+    }
+  }
+
   /* ── Physics step ──────────────────────────────────────────── */
   function physics() {
     buildHash();
+    updateCOM();
+
+    var midX = W * 0.5, midY = H * 0.5;
 
     // Accumulators
     var ax = new Float32Array(N);
     var ay = new Float32Array(N);
 
-    // Gravity + repulsion via spatial hash (nearby cells only)
+    // Pairwise gravity + repulsion via spatial hash
     for (var i = 0; i < N; i++) {
       var cx = Math.floor(px[i] / CELL);
       var cy = Math.floor(py[i] / CELL);
@@ -169,12 +193,13 @@
             var ddy = py[j] - py[i];
             var r2  = ddx * ddx + ddy * ddy;
 
-            // Gravity (attractive)
-            var f = G / (r2 + SOFTENING);
+            // Gravity (attractive) — stronger for same-quote particles
+            var gMul = (qi_arr[i] === qi_arr[j]) ? 2.5 : 1;
+            var f = G * gMul / (r2 + SOFTENING);
             ax[i] += f * ddx;   ay[i] += f * ddy;
             ax[j] -= f * ddx;   ay[j] -= f * ddy;
 
-            // Short-range repulsion
+            // Short-range repulsion (prevents collapse)
             if (r2 < REPULSE_R * REPULSE_R && r2 > 0.1) {
               var rf = -REPULSE_K / (r2 + 10);
               ax[i] += rf * ddx;   ay[i] += rf * ddy;
@@ -185,11 +210,21 @@
       }
     }
 
-    // Homing force + mouse + integrate
+    // Per-particle forces: homing, cluster attraction, centre pull, mouse
     for (var i = 0; i < N; i++) {
-      // Homing spring
+      var q = qi_arr[i];
+
+      // Homing spring (toward text position)
       ax[i] += HOME_BASE * (hx[i] - px[i]);
       ay[i] += HOME_BASE * (hy[i] - py[i]);
+
+      // Cluster attraction (toward own quote's centre of mass)
+      ax[i] += CLUSTER_K * (comX[q] - px[i]);
+      ay[i] += CLUSTER_K * (comY[q] - py[i]);
+
+      // Weak global centre pull (prevents particles escaping to edges)
+      ax[i] += CENTER_K * (midX - px[i]);
+      ay[i] += CENTER_K * (midY - py[i]);
 
       // Mouse attraction
       if (mouseDown && mouseX > 0) {
@@ -240,24 +275,27 @@
   var phase     = PHASE_READ;
   var phaseTime = 0;
   var readMs    = 4000;    // hold readable text
-  var driftMs   = 18000;   // free gravitational drift
-  var reformMs  = 6000;    // spring back to readable
+  var driftMs   = 14000;   // gravitational drift (cluster + centre keep it bounded)
+  var reformMs  = 5000;    // spring back to readable
 
   function updatePhase(dt) {
     phaseTime += dt;
 
     if (phase === PHASE_READ) {
       HOME_BASE = HOME_MAX;
+      CLUSTER_K = 0.05;       // gentle during read
       if (phaseTime > readMs) { phase = PHASE_DRIFT; phaseTime = 0; }
     } else if (phase === PHASE_DRIFT) {
-      // Ease homing out over first 2s, then keep at 0
-      var t = Math.min(phaseTime / 2000, 1);
-      HOME_BASE = HOME_MAX * (1 - t * t);
+      // Ease homing out but keep a floor so particles don't fully escape
+      var t = Math.min(phaseTime / 2500, 1);
+      HOME_BASE = HOME_MAX * 0.05 + HOME_MAX * 0.95 * (1 - t * t);
+      CLUSTER_K = 0.15;       // cluster attraction keeps quote groups together
       if (phaseTime > driftMs) { phase = PHASE_REFORM; phaseTime = 0; }
     } else if (phase === PHASE_REFORM) {
       // Ease homing back in
       var t = Math.min(phaseTime / reformMs, 1);
-      HOME_BASE = HOME_MAX * t * t;
+      HOME_BASE = HOME_MAX * (0.05 + 0.95 * t * t);
+      CLUSTER_K = 0.15 * (1 - t);  // fade out cluster pull as homing takes over
       if (phaseTime > reformMs) { phase = PHASE_READ; phaseTime = 0; }
     }
   }
