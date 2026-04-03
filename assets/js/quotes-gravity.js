@@ -51,44 +51,53 @@
   var dpr = window.devicePixelRatio || 1;
   var W, H;
 
-  function sizeCanvas() {
+  function sizeCanvas(textH) {
     W = wrap.clientWidth || 760;
-    H = Math.max(500, window.innerHeight * 0.7);
+    // If we know the text height, use it; otherwise use a default
+    H = textH ? Math.max(500, textH + 40) : Math.max(500, window.innerHeight * 0.7);
     canvas.width  = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     canvas.style.width  = W + 'px';
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+  // Initial size to get W for text layout
   sizeCanvas();
 
   /* ── Use pretext to layout all quotes and map characters ───── */
   var N = 0;            // total particle count
   var maxW = W - 20;    // text area width with small padding
 
-  // First pass: count characters
-  var charData = [];    // { ch, qIdx, hx, hy }
-  var yOff = 20;
-
-  for (var qi = 0; qi < quotes.length; qi++) {
-    var text = quotes[qi];
-    var prepared = pt.prepareWithSegments(text, font, { whiteSpace: 'pre-wrap' });
-    var layout = pt.layoutWithLines(prepared, maxW, lh);
-
-    for (var li = 0; li < layout.lines.length; li++) {
-      var lineText = layout.lines[li].text;
-      var x = 10;
-      for (var ci = 0; ci < lineText.length; ci++) {
-        var ch = lineText[ci];
-        if (ch !== ' ' && ch !== '\t') {
-          charData.push({ ch: ch, qIdx: qi, hx: x + cw * 0.5, hy: yOff + lh * 0.5 });
+  function layoutQuotes() {
+    var data = [];
+    var yOff = 20;
+    maxW = W - 20;
+    for (var qi = 0; qi < quotes.length; qi++) {
+      var text = quotes[qi];
+      var prepared = pt.prepareWithSegments(text, font, { whiteSpace: 'pre-wrap' });
+      var layout = pt.layoutWithLines(prepared, maxW, lh);
+      for (var li = 0; li < layout.lines.length; li++) {
+        var lineText = layout.lines[li].text;
+        var x = 10;
+        for (var ci = 0; ci < lineText.length; ci++) {
+          var ch = lineText[ci];
+          if (ch !== ' ' && ch !== '\t') {
+            data.push({ ch: ch, qIdx: qi, hx: x + cw * 0.5, hy: yOff + lh * 0.5 });
+          }
+          x += cw;
         }
-        x += cw;
+        yOff += lh;
       }
-      yOff += lh;
+      yOff += lh;   // gap between quotes
     }
-    yOff += lh;   // gap between quotes
+    return { data: data, totalH: yOff };
   }
+
+  var result = layoutQuotes();
+  var charData = result.data;
+
+  // Now resize canvas to fit all text
+  sizeCanvas(result.totalH);
 
   N = charData.length;
   if (!N) return;
@@ -275,7 +284,7 @@
 
   var phase     = PHASE_READ;
   var phaseTime = 0;
-  var readMs    = 4000;    // hold readable text
+  var readMs    = 8000;    // hold readable text
   var driftMs   = 14000;   // gravitational drift (cluster + centre keep it bounded)
   var reformMs  = 5000;    // spring back to readable
 
@@ -379,32 +388,14 @@
   window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
-      sizeCanvas();
-      // Recalculate home positions
-      maxW = W - 20;
-      var newData = [];
-      var yOff = 20;
-      for (var qi = 0; qi < quotes.length; qi++) {
-        var text = quotes[qi];
-        var prepared = pt.prepareWithSegments(text, font, { whiteSpace: 'pre-wrap' });
-        var layout = pt.layoutWithLines(prepared, maxW, lh);
-        for (var li = 0; li < layout.lines.length; li++) {
-          var lineText = layout.lines[li].text;
-          var x = 10;
-          for (var ci = 0; ci < lineText.length; ci++) {
-            if (lineText[ci] !== ' ' && lineText[ci] !== '\t') {
-              newData.push({ hx: x + cw * 0.5, hy: yOff + lh * 0.5 });
-            }
-            x += cw;
-          }
-          yOff += lh;
-        }
-        yOff += lh;
-      }
+      // Temporarily update W for layout calculation
+      W = wrap.clientWidth || 760;
+      var r = layoutQuotes();
+      sizeCanvas(r.totalH);
       // Update home positions (particle count stays the same)
-      for (var i = 0; i < N && i < newData.length; i++) {
-        hx[i] = newData[i].hx;
-        hy[i] = newData[i].hy;
+      for (var i = 0; i < N && i < r.data.length; i++) {
+        hx[i] = r.data[i].hx;
+        hy[i] = r.data[i].hy;
       }
     }, 300);
   });
