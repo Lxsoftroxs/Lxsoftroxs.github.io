@@ -114,13 +114,14 @@
   charData = null; // free
 
   /* ── Physics constants ─────────────────────────────────────── */
-  var G           = 120;      // gravitational constant (pairwise)
+  var G           = 60;       // gravitational constant (pairwise)
+  var G_BASE      = 60;       // base gravity (used during drift)
   var SOFTENING   = 80;       // softening term (r^2 + SOFTENING)
   var REPULSE_R   = 12;       // repulsion cutoff distance
   var REPULSE_K   = 2000;     // repulsion strength
-  var DAMPING     = 0.985;    // velocity damping per frame
+  var DAMPING     = 0.97;     // velocity damping per frame
   var HOME_BASE   = 0;        // current homing spring constant
-  var HOME_MAX    = 0.03;     // max homing spring constant
+  var HOME_MAX    = 0.25;     // max homing spring constant (strong enough to resist gravity)
   var CLUSTER_K   = 0.15;     // attraction to own quote's center of mass
   var CENTER_K    = 0.003;    // weak pull toward canvas centre (prevents escape)
   var MOUSE_FORCE = 12000;    // mouse attraction strength
@@ -283,19 +284,23 @@
 
     if (phase === PHASE_READ) {
       HOME_BASE = HOME_MAX;
-      CLUSTER_K = 0.05;       // gentle during read
+      G = 0;                  // no gravity during read — characters stay put
+      CLUSTER_K = 0;
       if (phaseTime > readMs) { phase = PHASE_DRIFT; phaseTime = 0; }
     } else if (phase === PHASE_DRIFT) {
-      // Ease homing out but keep a floor so particles don't fully escape
-      var t = Math.min(phaseTime / 2500, 1);
-      HOME_BASE = HOME_MAX * 0.05 + HOME_MAX * 0.95 * (1 - t * t);
-      CLUSTER_K = 0.15;       // cluster attraction keeps quote groups together
+      // Ease gravity in and homing out over 3 seconds
+      var tIn = Math.min(phaseTime / 3000, 1);
+      G = G_BASE * tIn * tIn;
+      // Keep a meaningful homing floor so characters don't fully scatter
+      HOME_BASE = HOME_MAX * (0.08 + 0.92 * (1 - tIn * tIn));
+      CLUSTER_K = 0.15;
       if (phaseTime > driftMs) { phase = PHASE_REFORM; phaseTime = 0; }
     } else if (phase === PHASE_REFORM) {
-      // Ease homing back in
+      // Ease homing back in, gravity out
       var t = Math.min(phaseTime / reformMs, 1);
-      HOME_BASE = HOME_MAX * (0.05 + 0.95 * t * t);
-      CLUSTER_K = 0.15 * (1 - t);  // fade out cluster pull as homing takes over
+      HOME_BASE = HOME_MAX * (0.08 + 0.92 * t * t);
+      G = G_BASE * (1 - t * t);
+      CLUSTER_K = 0.15 * (1 - t);
       if (phaseTime > reformMs) { phase = PHASE_READ; phaseTime = 0; }
     }
   }
@@ -364,6 +369,8 @@
 
   /* ── First paint (readable) then go ────────────────────────── */
   HOME_BASE = HOME_MAX;
+  G = 0;            // start with no gravity so text stays readable
+  CLUSTER_K = 0;
   draw();
   requestAnimationFrame(animate);
 
