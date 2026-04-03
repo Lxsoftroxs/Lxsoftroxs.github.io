@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: quotes
 title: Quotes
 date: 2025-10-18
 permalink: /quotes/
