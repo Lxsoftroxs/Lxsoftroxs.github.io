@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: constellation
 title: "Being Young"
 date: 2025-03-27
 ---

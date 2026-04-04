@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: wave-ripple
 title: "Yinz"
 date: 2025-06-14
 ---

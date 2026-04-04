@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: flame-ember
 title: "The Full Story"
 date: 2025-03-26
 ---

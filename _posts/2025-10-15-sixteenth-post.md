@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: typewriter-glitch
 title: "Haystacks and Haybales"
 date: 2025-10-15
 ---

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: wave-ripple
 title: "One More Notification"
 date: 2025-03-20
 ---

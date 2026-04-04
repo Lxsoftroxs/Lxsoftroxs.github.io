@@ -576,6 +576,166 @@ img {
 }
 
 /* ============================================================
+   Matrix Rain canvas
+   ============================================================ */
+.matrix-rain {
+  position: relative;
+  min-height: 400px;
+}
+
+.matrix-rain .matrix-source {
+  position: absolute;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
+
+.matrix-canvas {
+  display: block;
+  margin: 0 auto;
+  cursor: pointer;
+  border: 1px solid rgba(0, 255, 70, 0.08);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.95);
+}
+
+.matrix-hint {
+  text-align: center;
+  color: #555;
+  font-size: 0.75em;
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   Wave Ripple canvas
+   ============================================================ */
+.wave-ripple {
+  position: relative;
+  min-height: 400px;
+}
+
+.wave-ripple .wave-source {
+  position: absolute;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
+
+.wave-canvas {
+  display: block;
+  margin: 0 auto;
+  cursor: pointer;
+  border: 1px solid rgba(70, 180, 255, 0.08);
+  border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 50%, rgba(5, 15, 30, 0.95), rgba(0, 0, 0, 0.98));
+}
+
+.wave-hint {
+  text-align: center;
+  color: #555;
+  font-size: 0.75em;
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   Constellation canvas
+   ============================================================ */
+.constellation {
+  position: relative;
+  min-height: 400px;
+}
+
+.constellation .constellation-source {
+  position: absolute;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
+
+.constellation-canvas {
+  display: block;
+  margin: 0 auto;
+  cursor: crosshair;
+  border: 1px solid rgba(180, 200, 255, 0.06);
+  border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 30%, rgba(10, 12, 30, 0.95), rgba(0, 0, 5, 0.99));
+}
+
+.constellation-hint {
+  text-align: center;
+  color: #555;
+  font-size: 0.75em;
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   Flame Ember canvas
+   ============================================================ */
+.flame-ember {
+  position: relative;
+  min-height: 400px;
+}
+
+.flame-ember .flame-source {
+  position: absolute;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
+
+.flame-canvas {
+  display: block;
+  margin: 0 auto;
+  cursor: pointer;
+  border: 1px solid rgba(255, 120, 30, 0.08);
+  border-radius: 4px;
+  background: linear-gradient(to top, rgba(30, 5, 0, 0.95), rgba(0, 0, 0, 0.98));
+}
+
+.flame-hint {
+  text-align: center;
+  color: #555;
+  font-size: 0.75em;
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================
+   Typewriter Glitch canvas
+   ============================================================ */
+.typewriter-glitch {
+  position: relative;
+  min-height: 400px;
+}
+
+.typewriter-glitch .typewriter-source {
+  position: absolute;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
+
+.typewriter-canvas {
+  display: block;
+  margin: 0 auto;
+  cursor: text;
+  border: 1px solid rgba(102, 221, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.92);
+}
+
+.typewriter-hint {
+  text-align: center;
+  color: #555;
+  font-size: 0.75em;
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================
    content-visibility: skip off-screen rendering for grids
    contain-intrinsic-size prevents scroll-height collapse
    ============================================================ */
