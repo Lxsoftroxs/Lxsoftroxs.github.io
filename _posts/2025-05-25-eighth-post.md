@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: flame-ember
 title: "Obsessed With You"
 date: 2025-05-25
 ---

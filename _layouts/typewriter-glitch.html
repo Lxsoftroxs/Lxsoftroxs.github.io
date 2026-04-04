@@ -1,0 +1,22 @@
+---
+layout: default
+---
+<article class="post typewriter-glitch-post">
+  <h1>{{ page.title }}</h1>
+  <p class="post-meta">Posted on {{ page.date | date: "%B %-d, %Y" }}</p>
+  <div class="typewriter-glitch" data-typewriter>
+    <div class="typewriter-source">{{ content }}</div>
+    <canvas class="typewriter-canvas"></canvas>
+    <p class="typewriter-hint">click to corrupt &middot; double-click to retype</p>
+  </div>
+</article>
+<hr>
+<section id="comments">
+  <script src="https://utteranc.es/client.js"
+          repo="lxsoftroxs/lxsoftroxs.github.io"
+          issue-term="pathname"
+          theme="github-dark"
+          crossorigin="anonymous"
+          async>
+  </script>
+</section>

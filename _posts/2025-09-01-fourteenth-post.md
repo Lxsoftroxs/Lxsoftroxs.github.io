@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: constellation
 title: "Shooting The Moon"
 date: 2025-09-01
 ---

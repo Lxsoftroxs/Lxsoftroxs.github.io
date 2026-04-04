@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: typewriter-glitch
 title: "Ugly Choices"
 date: 2025-07-02
 ---

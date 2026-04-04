@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: poetry
 title: "Boogie Woogie"
 date: 2025-09-07
 ---

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: typewriter-glitch
 title: "Getting out of the house"
 date: 2025-06-04
 ---

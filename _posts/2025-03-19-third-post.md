@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: matrix-rain
 title: "The Heart of the Internet"
 date: 2025-03-19
 ---

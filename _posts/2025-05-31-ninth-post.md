@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: poetry
 title: "Ostrtch a flightless Bird"
 date: 2025-05-31
 ---

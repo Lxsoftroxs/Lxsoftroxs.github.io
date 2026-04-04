@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: wave-ripple
 title: "Hello World"
 date: 2025-03-15
 ---
