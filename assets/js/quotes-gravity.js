@@ -4,6 +4,7 @@
    Characters scatter, orbit, cluster, then slowly reform into readable
    quotes — an endless gravitational ballet of words. */
 (async function () {
+
   /* ── Early exit ────────────────────────────────────────────── */
   var wrap = document.querySelector('.quotes-gravity[data-quotes]');
   if (!wrap) return;
@@ -40,12 +41,57 @@
     '#6ff', '#fa8', '#88f', '#f88', '#8f8', '#f8d'
   ];
 
+  /* ══════════════════════════════════════════════════════════════
+     CONFIGURATION — tweak these to adjust the simulation feel
+     ══════════════════════════════════════════════════════════════ */
+
+  /* -- Font --------------------------------------------------- */
+  var FONT_SIZE    = 13;
+  var FONT_FAMILY  = '"Courier New", Courier, monospace';
+  var LINE_HEIGHT  = 1.7;                          // multiplier of FONT_SIZE
+  var TEXT_PADDING  = 10;                           // px padding inside canvas
+
+  /* -- Physics ------------------------------------------------ */
+  var G_BASE       = 800;       // gravitational constant (pairwise)
+  var SOFTENING    = 80;        // softening term prevents singularity (r² + SOFTENING)
+  var REPULSE_R    = 12;        // repulsion cutoff radius (px)
+  var REPULSE_K    = 2000;      // repulsion strength
+  var DAMPING      = 0.97;      // velocity damping per frame (0 = frozen, 1 = frictionless)
+  var SAME_QUOTE_G = 2.5;       // gravity multiplier for characters in the same quote
+  var DT           = 0.5;       // integration timestep
+
+  /* -- Homing spring ------------------------------------------ */
+  var HOME_MAX     = 0.25;      // max homing spring constant (read phase)
+  var HOME_FLOOR   = 0.12;      // min homing fraction during drift (keeps some structure)
+
+  /* -- Cluster & containment ---------------------------------- */
+  var CLUSTER_K    = 0.15;      // attraction to own quote's centre of mass
+  var CENTER_K     = 0.003;     // weak pull toward canvas centre (prevents escape)
+
+  /* -- Interaction -------------------------------------------- */
+  var MOUSE_FORCE  = 12000;     // mouse/touch attraction strength
+  var SCATTER_VEL  = 8;         // base velocity added on scatter-click
+
+  /* -- Phase timing (ms) -------------------------------------- */
+  var READ_MS      = 8000;      // hold readable text
+  var DRIFT_MS     = 14000;     // gravitational drift duration
+  var DRIFT_EASE   = 3000;      // ms to ease gravity in at start of drift
+  var REFORM_MS    = 5000;      // spring back to readable
+
+  /* -- Spatial hash ------------------------------------------- */
+  var CELL         = 160;       // hash cell size in px
+
+  /* -- Boundary ----------------------------------------------- */
+  var EDGE_PAD     = 5;         // soft-bounce distance from canvas edge
+  var BOUNCE_DAMP  = -0.5;      // velocity multiplier on edge bounce
+
+  /* ══════════════════════════════════════════════════════════════ */
+
   /* ── Font metrics ──────────────────────────────────────────── */
-  var fontSize = 13;
-  var font = fontSize + 'px "Courier New", Courier, monospace';
-  var lh = Math.round(fontSize * 1.7);
+  var font = FONT_SIZE + 'px ' + FONT_FAMILY;
+  var lh   = Math.round(FONT_SIZE * LINE_HEIGHT);
   ctx.font = font;
-  var cw = ctx.measureText('M').width;
+  var cw   = ctx.measureText('M').width;
 
   /* ── Canvas sizing ─────────────────────────────────────────── */
   var dpr = window.devicePixelRatio || 1;
@@ -53,7 +99,6 @@
 
   function sizeCanvas(textH) {
     W = wrap.clientWidth || 760;
-    // If we know the text height, use it; otherwise use a default
     H = textH ? Math.max(500, textH + 40) : Math.max(500, window.innerHeight * 0.7);
     canvas.width  = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
@@ -61,28 +106,36 @@
     canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  // Initial size to get W for text layout
+
   sizeCanvas();
 
   /* ── Use pretext to layout all quotes and map characters ───── */
-  var N = 0;            // total particle count
-  var maxW = W - 20;    // text area width with small padding
+  var N = 0;
+  var maxW = W - TEXT_PADDING * 2;
 
   function layoutQuotes() {
     var data = [];
-    var yOff = 20;
-    maxW = W - 20;
+    var yOff = TEXT_PADDING * 2;
+    maxW = W - TEXT_PADDING * 2;
+
     for (var qi = 0; qi < quotes.length; qi++) {
       var text = quotes[qi];
       var prepared = pt.prepareWithSegments(text, font, { whiteSpace: 'pre-wrap' });
-      var layout = pt.layoutWithLines(prepared, maxW, lh);
+      var layout   = pt.layoutWithLines(prepared, maxW, lh);
+
       for (var li = 0; li < layout.lines.length; li++) {
         var lineText = layout.lines[li].text;
-        var x = 10;
+        var x = TEXT_PADDING;
+
         for (var ci = 0; ci < lineText.length; ci++) {
           var ch = lineText[ci];
           if (ch !== ' ' && ch !== '\t') {
-            data.push({ ch: ch, qIdx: qi, hx: x + cw * 0.5, hy: yOff + lh * 0.5 });
+            data.push({
+              ch:   ch,
+              qIdx: qi,
+              hx:   x + cw * 0.5,
+              hy:   yOff + lh * 0.5
+            });
           }
           x += cw;
         }
@@ -93,24 +146,27 @@
     return { data: data, totalH: yOff };
   }
 
-  var result = layoutQuotes();
+  var result   = layoutQuotes();
   var charData = result.data;
 
-  // Now resize canvas to fit all text
   sizeCanvas(result.totalH);
 
   N = charData.length;
   if (!N) return;
 
   /* ── Particle arrays (typed for speed) ─────────────────────── */
-  var px = new Float32Array(N);   // position x
-  var py = new Float32Array(N);   // position y
-  var vx = new Float32Array(N);   // velocity x
-  var vy = new Float32Array(N);   // velocity y
-  var hx = new Float32Array(N);   // home x
-  var hy = new Float32Array(N);   // home y
-  var ch = new Array(N);          // character
-  var qi_arr = new Uint8Array(N); // quote index
+  var px     = new Float32Array(N);   // position x
+  var py     = new Float32Array(N);   // position y
+  var vx     = new Float32Array(N);   // velocity x
+  var vy     = new Float32Array(N);   // velocity y
+  var hx     = new Float32Array(N);   // home x
+  var hy     = new Float32Array(N);   // home y
+  var ch     = new Array(N);          // character
+  var qi_arr = new Uint8Array(N);     // quote index
+
+  /* Pre-allocated acceleration buffers (avoid per-frame GC) */
+  var ax = new Float32Array(N);
+  var ay = new Float32Array(N);
 
   for (var i = 0; i < N; i++) {
     var d = charData[i];
@@ -120,25 +176,14 @@
     ch[i] = d.ch;
     qi_arr[i] = d.qIdx;
   }
-  charData = null; // free
+  charData = null;
 
-  /* ── Physics constants ─────────────────────────────────────── */
-  var G           = 6000;       // gravitational constant (pairwise)
-  var G_BASE      = 6000;       // base gravity (used during drift)
-  var SOFTENING   = 80;       // softening term (r^2 + SOFTENING)
-  var REPULSE_R   = 12;       // repulsion cutoff distance
-  var REPULSE_K   = 2000;     // repulsion strength
-  var DAMPING     = 0.97;     // velocity damping per frame
-  var HOME_BASE   = 0;        // current homing spring constant
-  var HOME_MAX    = 0.25;     // max homing spring constant (strong enough to resist gravity)
-  var CLUSTER_K   = 0.15;     // attraction to own quote's center of mass
-  var CENTER_K    = 0.003;    // weak pull toward canvas centre (prevents escape)
-  var MOUSE_FORCE = 12000;    // mouse attraction strength
-  var SCATTER_VEL = 4;        // velocity added on scatter-click
-  var DT          = 0.5;      // integration timestep
+  /* ── Mutable physics state (updated each frame by phase) ───── */
+  var G        = 0;
+  var homeCur  = HOME_MAX;
+  var clusterK = 0;
 
   /* ── Spatial hash ──────────────────────────────────────────── */
-  var CELL = 160;             // larger cells → more pairwise interactions
   var hashMap = new Map();
 
   function cellKey(cx, cy) { return (cx + 5000) * 10001 + (cy + 5000); }
@@ -146,8 +191,8 @@
   function buildHash() {
     hashMap.clear();
     for (var i = 0; i < N; i++) {
-      var cx = Math.floor(px[i] / CELL);
-      var cy = Math.floor(py[i] / CELL);
+      var cx  = Math.floor(px[i] / CELL);
+      var cy  = Math.floor(py[i] / CELL);
       var key = cellKey(cx, cy);
       var bucket = hashMap.get(key);
       if (!bucket) { bucket = []; hashMap.set(key, bucket); }
@@ -157,9 +202,9 @@
 
   /* ── Per-quote centre of mass (updated each frame) ─────────── */
   var nQuotes = quotes.length;
-  var comX = new Float32Array(nQuotes);  // centre-of-mass x
-  var comY = new Float32Array(nQuotes);  // centre-of-mass y
-  var comN = new Uint16Array(nQuotes);   // count per quote
+  var comX = new Float32Array(nQuotes);
+  var comY = new Float32Array(nQuotes);
+  var comN = new Uint16Array(nQuotes);
 
   function updateCOM() {
     comX.fill(0); comY.fill(0); comN.fill(0);
@@ -179,13 +224,14 @@
     buildHash();
     updateCOM();
 
-    var midX = W * 0.5, midY = H * 0.5;
+    var midX = W * 0.5;
+    var midY = H * 0.5;
 
-    // Accumulators
-    var ax = new Float32Array(N);
-    var ay = new Float32Array(N);
+    // Zero acceleration buffers
+    ax.fill(0);
+    ay.fill(0);
 
-    // Pairwise gravity + repulsion via spatial hash
+    // --- Pairwise gravity + repulsion via spatial hash ---
     for (var i = 0; i < N; i++) {
       var cx = Math.floor(px[i] / CELL);
       var cy = Math.floor(py[i] / CELL);
@@ -197,46 +243,52 @@
 
           for (var bi = 0; bi < bucket.length; bi++) {
             var j = bucket[bi];
-            if (j <= i) continue;    // each pair once
+            if (j <= i) continue;   // each pair processed once
 
             var ddx = px[j] - px[i];
             var ddy = py[j] - py[i];
             var r2  = ddx * ddx + ddy * ddy;
 
-            // Gravity (attractive) — stronger for same-quote particles
-            var gMul = (qi_arr[i] === qi_arr[j]) ? 2.5 : 1;
-            var f = G * gMul / (r2 + SOFTENING);
-            ax[i] += f * ddx;   ay[i] += f * ddy;
-            ax[j] -= f * ddx;   ay[j] -= f * ddy;
+            if (r2 < 0.1) continue; // skip overlapping particles
+
+            // FIX: Normalize force direction so gravity falls off as 1/r²
+            var r    = Math.sqrt(r2);
+            var nx   = ddx / r;
+            var ny   = ddy / r;
+            var gMul = (qi_arr[i] === qi_arr[j]) ? SAME_QUOTE_G : 1;
+            var f    = G * gMul / (r2 + SOFTENING);
+
+            ax[i] += f * nx;   ay[i] += f * ny;
+            ax[j] -= f * nx;   ay[j] -= f * ny;
 
             // Short-range repulsion (prevents collapse)
-            if (r2 < REPULSE_R * REPULSE_R && r2 > 0.1) {
+            if (r2 < REPULSE_R * REPULSE_R) {
               var rf = -REPULSE_K / (r2 + 10);
-              ax[i] += rf * ddx;   ay[i] += rf * ddy;
-              ax[j] -= rf * ddx;   ay[j] -= rf * ddy;
+              ax[i] += rf * nx;   ay[i] += rf * ny;
+              ax[j] -= rf * nx;   ay[j] -= rf * ny;
             }
           }
         }
       }
     }
 
-    // Per-particle forces: homing, cluster attraction, centre pull, mouse
+    // --- Per-particle forces: homing, cluster, centre pull, mouse ---
     for (var i = 0; i < N; i++) {
       var q = qi_arr[i];
 
-      // Homing spring (toward text position)
-      ax[i] += HOME_BASE * (hx[i] - px[i]);
-      ay[i] += HOME_BASE * (hy[i] - py[i]);
+      // Homing spring (toward readable text position)
+      ax[i] += homeCur * (hx[i] - px[i]);
+      ay[i] += homeCur * (hy[i] - py[i]);
 
       // Cluster attraction (toward own quote's centre of mass)
-      ax[i] += CLUSTER_K * (comX[q] - px[i]);
-      ay[i] += CLUSTER_K * (comY[q] - py[i]);
+      ax[i] += clusterK * (comX[q] - px[i]);
+      ay[i] += clusterK * (comY[q] - py[i]);
 
       // Weak global centre pull (prevents particles escaping to edges)
       ax[i] += CENTER_K * (midX - px[i]);
       ay[i] += CENTER_K * (midY - py[i]);
 
-      // Mouse attraction
+      // Mouse / touch attraction
       if (mouseDown && mouseX > 0) {
         var mdx = mouseX - px[i];
         var mdy = mouseY - py[i];
@@ -253,10 +305,10 @@
       py[i] += vy[i] * DT;
 
       // Soft boundary bounce
-      if (px[i] < 5)     { px[i] = 5;     vx[i] *= -0.5; }
-      if (px[i] > W - 5) { px[i] = W - 5; vx[i] *= -0.5; }
-      if (py[i] < 5)     { py[i] = 5;     vy[i] *= -0.5; }
-      if (py[i] > H - 5) { py[i] = H - 5; vy[i] *= -0.5; }
+      if (px[i] < EDGE_PAD)     { px[i] = EDGE_PAD;     vx[i] *= BOUNCE_DAMP; }
+      if (px[i] > W - EDGE_PAD) { px[i] = W - EDGE_PAD; vx[i] *= BOUNCE_DAMP; }
+      if (py[i] < EDGE_PAD)     { py[i] = EDGE_PAD;     vy[i] *= BOUNCE_DAMP; }
+      if (py[i] > H - EDGE_PAD) { py[i] = H - EDGE_PAD; vy[i] *= BOUNCE_DAMP; }
     }
   }
 
@@ -267,13 +319,29 @@
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
 
+    // Batch characters by colour to minimise state changes
+    var colorBuckets = {};
     for (var i = 0; i < N; i++) {
       var color = COLORS[qi_arr[i] % COLORS.length];
-      ctx.fillStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 3;
-      ctx.fillText(ch[i], px[i], py[i]);
+      if (!colorBuckets[color]) colorBuckets[color] = [];
+      colorBuckets[color].push(i);
     }
+
+    var colorKeys = Object.keys(colorBuckets);
+    for (var ci = 0; ci < colorKeys.length; ci++) {
+      var c       = colorKeys[ci];
+      var indices = colorBuckets[c];
+
+      ctx.fillStyle   = c;
+      ctx.shadowColor = c;
+      ctx.shadowBlur  = 3;
+
+      for (var k = 0; k < indices.length; k++) {
+        var idx = indices[k];
+        ctx.fillText(ch[idx], px[idx], py[idx]);
+      }
+    }
+
     ctx.shadowBlur = 0;
   }
 
@@ -284,38 +352,38 @@
 
   var phase     = PHASE_READ;
   var phaseTime = 0;
-  var readMs    = 8000;    // hold readable text
-  var driftMs   = 14000;   // gravitational drift (cluster + centre keep it bounded)
-  var reformMs  = 5000;    // spring back to readable
 
   function updatePhase(dt) {
     phaseTime += dt;
 
     if (phase === PHASE_READ) {
-      HOME_BASE = HOME_MAX;
-      G = 0;                  // no gravity during read — characters stay put
-      CLUSTER_K = 0;
-      if (phaseTime > readMs) { phase = PHASE_DRIFT; phaseTime = 0; }
+      // Characters held perfectly readable — no gravity
+      homeCur  = HOME_MAX;
+      G        = 0;
+      clusterK = 0;
+      if (phaseTime > READ_MS) { phase = PHASE_DRIFT; phaseTime = 0; }
+
     } else if (phase === PHASE_DRIFT) {
-      // Ease gravity in and homing out over 3 seconds
-      var tIn = Math.min(phaseTime / 3000, 1);
-      G = G_BASE * tIn * tIn;
-      // Keep a meaningful homing floor so characters don't fully scatter
-      HOME_BASE = HOME_MAX * (0.08 + 0.92 * (1 - tIn * tIn));
-      CLUSTER_K = 0.15;
-      if (phaseTime > driftMs) { phase = PHASE_REFORM; phaseTime = 0; }
+      // Ease gravity in, ease homing down (but keep a floor for structure)
+      var tIn = Math.min(phaseTime / DRIFT_EASE, 1);
+      G        = G_BASE * tIn * tIn;
+      homeCur  = HOME_MAX * (HOME_FLOOR + (1 - HOME_FLOOR) * (1 - tIn * tIn));
+      clusterK = CLUSTER_K;
+      if (phaseTime > DRIFT_MS) { phase = PHASE_REFORM; phaseTime = 0; }
+
     } else if (phase === PHASE_REFORM) {
-      // Ease homing back in, gravity out
-      var t = Math.min(phaseTime / reformMs, 1);
-      HOME_BASE = HOME_MAX * (0.08 + 0.92 * t * t);
-      G = G_BASE * (1 - t * t);
-      CLUSTER_K = 0.15 * (1 - t);
-      if (phaseTime > reformMs) { phase = PHASE_READ; phaseTime = 0; }
+      // Ease homing back up, gravity out
+      var t = Math.min(phaseTime / REFORM_MS, 1);
+      homeCur  = HOME_MAX * (HOME_FLOOR + (1 - HOME_FLOOR) * t * t);
+      G        = G_BASE * (1 - t * t);
+      clusterK = CLUSTER_K * (1 - t);
+      if (phaseTime > REFORM_MS) { phase = PHASE_READ; phaseTime = 0; }
     }
   }
 
-  /* ── Mouse state ───────────────────────────────────────────── */
-  var mouseX = -999, mouseY = -999;
+  /* ── Mouse / touch state ───────────────────────────────────── */
+  var mouseX    = -999;
+  var mouseY    = -999;
   var mouseDown = false;
 
   canvas.addEventListener('mousemove', function (e) {
@@ -324,8 +392,8 @@
     mouseY = e.clientY - r.top;
   });
   canvas.addEventListener('mouseleave', function () { mouseX = -999; mouseDown = false; });
-  canvas.addEventListener('mousedown', function () { mouseDown = true; });
-  canvas.addEventListener('mouseup', function ()   { mouseDown = false; });
+  canvas.addEventListener('mousedown',  function () { mouseDown = true; });
+  canvas.addEventListener('mouseup',    function () { mouseDown = false; });
 
   canvas.addEventListener('touchstart', function (e) {
     if (e.touches[0]) {
@@ -344,20 +412,30 @@
   }, { passive: true });
   canvas.addEventListener('touchend', function () { mouseDown = false; }, { passive: true });
 
-  /* Click → scatter burst */
-  canvas.addEventListener('click', function () {
+  /* ── Click → scatter burst ─────────────────────────────────── */
+  var lastClickTime = 0;
+
+  canvas.addEventListener('click', function (e) {
+    var now = e.timeStamp || Date.now();
+
+    // FIX: Suppress click events that are part of a double-click (< 350ms gap)
+    if (now - lastClickTime < 350) return;
+    lastClickTime = now;
+
     for (var i = 0; i < N; i++) {
       var angle = Math.random() * Math.PI * 2;
-      vx[i] += Math.cos(angle) * SCATTER_VEL * (1 + Math.random());
-      vy[i] += Math.sin(angle) * SCATTER_VEL * (1 + Math.random());
+      var mag   = SCATTER_VEL * (1 + Math.random());
+      vx[i] += Math.cos(angle) * mag;
+      vy[i] += Math.sin(angle) * mag;
     }
-    phase = PHASE_DRIFT;
+    phase     = PHASE_DRIFT;
     phaseTime = 0;
   });
 
-  /* Double-click → reform immediately */
+  /* ── Double-click → reform immediately ─────────────────────── */
   canvas.addEventListener('dblclick', function () {
-    phase = PHASE_REFORM;
+    lastClickTime = 0;   // reset so next single-click works
+    phase     = PHASE_REFORM;
     phaseTime = 0;
   });
 
@@ -376,10 +454,10 @@
     requestAnimationFrame(animate);
   }
 
-  /* ── First paint (readable) then go ────────────────────────── */
-  HOME_BASE = HOME_MAX;
-  G = 0;            // start with no gravity so text stays readable
-  CLUSTER_K = 0;
+  /* ── First paint (readable) then start ─────────────────────── */
+  homeCur  = HOME_MAX;
+  G        = 0;
+  clusterK = 0;
   draw();
   requestAnimationFrame(animate);
 
@@ -388,15 +466,40 @@
   window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
-      // Temporarily update W for layout calculation
       W = wrap.clientWidth || 760;
       var r = layoutQuotes();
       sizeCanvas(r.totalH);
-      // Update home positions (particle count stays the same)
-      for (var i = 0; i < N && i < r.data.length; i++) {
-        hx[i] = r.data[i].hx;
-        hy[i] = r.data[i].hy;
+
+      // Reallocate acceleration buffers for potentially new N
+      if (r.data.length !== N) {
+        N      = r.data.length;
+        px     = new Float32Array(N);
+        py     = new Float32Array(N);
+        vx     = new Float32Array(N);
+        vy     = new Float32Array(N);
+        hx     = new Float32Array(N);
+        hy     = new Float32Array(N);
+        ch     = new Array(N);
+        qi_arr = new Uint8Array(N);
+        ax     = new Float32Array(N);
+        ay     = new Float32Array(N);
+
+        for (var i = 0; i < N; i++) {
+          var d = r.data[i];
+          px[i] = hx[i] = d.hx;
+          py[i] = hy[i] = d.hy;
+          vx[i] = vy[i] = 0;
+          ch[i] = d.ch;
+          qi_arr[i] = d.qIdx;
+        }
+      } else {
+        // Same count — just update home positions
+        for (var i = 0; i < N; i++) {
+          hx[i] = r.data[i].hx;
+          hy[i] = r.data[i].hy;
+        }
       }
     }, 300);
   });
+
 })();
