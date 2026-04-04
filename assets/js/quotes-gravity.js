@@ -123,8 +123,8 @@
   charData = null; // free
 
   /* ── Physics constants ─────────────────────────────────────── */
-  var G           = 60;       // gravitational constant (pairwise)
-  var G_BASE      = 60;       // base gravity (used during drift)
+  var G           = 6000;       // gravitational constant (pairwise)
+  var G_BASE      = 6000;       // base gravity (used during drift)
   var SOFTENING   = 80;       // softening term (r^2 + SOFTENING)
   var REPULSE_R   = 12;       // repulsion cutoff distance
   var REPULSE_K   = 2000;     // repulsion strength
