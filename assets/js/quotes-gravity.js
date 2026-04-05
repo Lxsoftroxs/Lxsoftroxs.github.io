@@ -9,6 +9,10 @@
   var wrap = document.querySelector('.quotes-gravity[data-quotes]');
   if (!wrap) return;
 
+  /* ── Device detection ──────────────────────────────────────── */
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  var GLOW = isMobile ? 0 : 1;
+
   /* ── Load pretext ──────────────────────────────────────────── */
   var pt;
   try {
@@ -332,9 +336,8 @@
       var c       = colorKeys[ci];
       var indices = colorBuckets[c];
 
-      ctx.fillStyle   = c;
-      ctx.shadowColor = c;
-      ctx.shadowBlur  = 3;
+      ctx.fillStyle = c;
+      if (GLOW) { ctx.shadowColor = c; ctx.shadowBlur = 3; }
 
       for (var k = 0; k < indices.length; k++) {
         var idx = indices[k];
@@ -342,7 +345,7 @@
       }
     }
 
-    ctx.shadowBlur = 0;
+    if (GLOW) ctx.shadowBlur = 0;
   }
 
   /* ── Phase management ──────────────────────────────────────── */

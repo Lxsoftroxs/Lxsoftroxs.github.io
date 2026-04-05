@@ -6,6 +6,10 @@
   var wrap = document.querySelector('.constellation[data-constellation]');
   if (!wrap) return;
 
+  /* ── Device detection ──────────────────────────────────────── */
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  var GLOW = isMobile ? 0 : 1;
+
   var pt;
   try {
     pt = await import('https://cdn.jsdelivr.net/npm/@chenglou/pretext/+esm');
@@ -324,13 +328,12 @@
       var color = STAR_COLORS[colorIdx[i]];
 
       ctx.globalAlpha = pulse;
-      ctx.fillStyle   = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur  = 4 * pulse;
+      ctx.fillStyle = color;
+      if (GLOW) { ctx.shadowColor = color; ctx.shadowBlur = 4 * pulse; }
       ctx.fillText(ch[i], px[i], py[i]);
     }
     ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
+    if (GLOW) ctx.shadowBlur = 0;
   }
 
   /* ── Animation loop ────────────────────────────────────────── */

@@ -6,6 +6,10 @@
   var wrap = document.querySelector('.typewriter-glitch[data-typewriter]');
   if (!wrap) return;
 
+  /* ── Device detection ──────────────────────────────────────── */
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  var GLOW = isMobile ? 0 : 1;
+
   var pt;
   try {
     pt = await import('https://cdn.jsdelivr.net/npm/@chenglou/pretext/+esm');
@@ -280,9 +284,8 @@
         color = COLOR_TYPED;
       }
 
-      ctx.fillStyle   = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur  = charState[i] === STATE_TYPED ? 2 : 5;
+      ctx.fillStyle = color;
+      if (GLOW) { ctx.shadowColor = color; ctx.shadowBlur = charState[i] === STATE_TYPED ? 2 : 5; }
       ctx.fillText(displayChar[i], hx[i], hy[i]);
 
       // Track cursor position (after last visible char)
@@ -291,15 +294,14 @@
         cursorY = hy[i];
       }
     }
-    ctx.shadowBlur = 0;
+    if (GLOW) ctx.shadowBlur = 0;
 
     // Draw blinking cursor
     if ((phase === PHASE_TYPE || phase === PHASE_RETYPE) && cursorVisible && cursorX > 0) {
       ctx.fillStyle = COLOR_CURSOR;
-      ctx.shadowColor = COLOR_CURSOR;
-      ctx.shadowBlur = 4;
+      if (GLOW) { ctx.shadowColor = COLOR_CURSOR; ctx.shadowBlur = 4; }
       ctx.fillRect(cursorX - 1, cursorY - FONT_SIZE * 0.45, 2, FONT_SIZE * 0.9);
-      ctx.shadowBlur = 0;
+      if (GLOW) ctx.shadowBlur = 0;
     }
   }
 
