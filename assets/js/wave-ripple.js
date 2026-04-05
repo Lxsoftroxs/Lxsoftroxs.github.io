@@ -6,6 +6,10 @@
   var wrap = document.querySelector('.wave-ripple[data-wave]');
   if (!wrap) return;
 
+  /* ── Device detection ──────────────────────────────────────── */
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  var GLOW = isMobile ? 0 : 1;
+
   var pt;
   try {
     pt = await import('https://cdn.jsdelivr.net/npm/@chenglou/pretext/+esm');
@@ -224,12 +228,11 @@
       var disp = Math.sqrt(dx * dx + dy * dy);
       var colorIdx = Math.min(Math.floor(disp / 4), COLORS.length - 1);
 
-      ctx.fillStyle   = COLORS[colorIdx];
-      ctx.shadowColor = COLORS[colorIdx];
-      ctx.shadowBlur  = 2 + disp * 0.3;
+      ctx.fillStyle = COLORS[colorIdx];
+      if (GLOW) { ctx.shadowColor = COLORS[colorIdx]; ctx.shadowBlur = 2 + disp * 0.3; }
       ctx.fillText(ch[i], x + dx, y + dy);
     }
-    ctx.shadowBlur = 0;
+    if (GLOW) ctx.shadowBlur = 0;
 
     requestAnimationFrame(animate);
   }
@@ -240,10 +243,9 @@
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
   ctx.fillStyle = COLORS[0];
-  ctx.shadowColor = COLORS[0];
-  ctx.shadowBlur = 3;
+  if (GLOW) { ctx.shadowColor = COLORS[0]; ctx.shadowBlur = 3; }
   for (var i = 0; i < N; i++) ctx.fillText(ch[i], hx[i], hy[i]);
-  ctx.shadowBlur = 0;
+  if (GLOW) ctx.shadowBlur = 0;
 
   requestAnimationFrame(animate);
 

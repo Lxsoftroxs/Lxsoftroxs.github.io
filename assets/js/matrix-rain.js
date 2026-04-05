@@ -6,6 +6,10 @@
   var wrap = document.querySelector('.matrix-rain[data-matrix]');
   if (!wrap) return;
 
+  /* ── Device detection ──────────────────────────────────────── */
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  var GLOW = isMobile ? 0 : 1;  // disable shadowBlur on mobile
+
   var pt;
   try {
     pt = await import('https://cdn.jsdelivr.net/npm/@chenglou/pretext/+esm');
@@ -148,17 +152,15 @@
 
         // Lead character — bright
         ctx.fillStyle = COLOR_BRIGHT;
-        ctx.shadowColor = COLOR_BRIGHT;
-        ctx.shadowBlur = 6;
+        if (GLOW) { ctx.shadowColor = COLOR_BRIGHT; ctx.shadowBlur = 6; }
         ctx.fillText(displayChar, px[i], py[i]);
-        ctx.shadowBlur = 0;
+        if (GLOW) ctx.shadowBlur = 0;
       } else {
         // Read / reform — steady cyan glow
         ctx.fillStyle = COLOR_BODY;
-        ctx.shadowColor = COLOR_BODY;
-        ctx.shadowBlur = 3;
+        if (GLOW) { ctx.shadowColor = COLOR_BODY; ctx.shadowBlur = 3; }
         ctx.fillText(ch[i], px[i], py[i]);
-        ctx.shadowBlur = 0;
+        if (GLOW) ctx.shadowBlur = 0;
       }
     }
   }

@@ -8,6 +8,10 @@
   var wrap = document.querySelector('.poetry-life[data-poem]');
   if (!wrap) return;
 
+  /* ── Device detection ──────────────────────────────────────── */
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  var GLOW = isMobile ? 0 : 1;
+
   /* ── Load pretext ──────────────────────────────────────────── */
   var pt;
   try {
@@ -152,8 +156,7 @@
     /* Characters with glow */
     ctx.font = font;
     ctx.textBaseline = 'top';
-    ctx.shadowColor = '#6df';
-    ctx.shadowBlur = 6;
+    if (GLOW) { ctx.shadowColor = '#6df'; ctx.shadowBlur = 6; }
     ctx.fillStyle = '#6df';
 
     var yPad = Math.round((lh - fontSize) / 2);
@@ -164,7 +167,7 @@
         }
       }
     }
-    ctx.shadowBlur = 0;
+    if (GLOW) ctx.shadowBlur = 0;
   }
 
   /* ── Animation state machine ───────────────────────────────── */

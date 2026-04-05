@@ -6,6 +6,10 @@
   var wrap = document.querySelector('.flame-ember[data-flame]');
   if (!wrap) return;
 
+  /* ── Device detection ──────────────────────────────────────── */
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+  var GLOW = isMobile ? 0 : 1;
+
   var pt;
   try {
     pt = await import('https://cdn.jsdelivr.net/npm/@chenglou/pretext/+esm');
@@ -312,12 +316,11 @@
       var fc = getFlameColor(heightRatio);
       var color = 'rgb(' + fc.r + ',' + fc.g + ',' + fc.b + ')';
 
-      ctx.fillStyle   = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur  = phase === PHASE_BURN ? 6 : 3;
+      ctx.fillStyle = color;
+      if (GLOW) { ctx.shadowColor = color; ctx.shadowBlur = phase === PHASE_BURN ? 6 : 3; }
       ctx.fillText(ch[i], px[i], py[i]);
     }
-    ctx.shadowBlur = 0;
+    if (GLOW) ctx.shadowBlur = 0;
   }
 
   /* ── Animation loop ────────────────────────────────────────── */
