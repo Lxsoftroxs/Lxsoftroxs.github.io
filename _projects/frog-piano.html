@@ -10,343 +10,409 @@ permalink: /projects/frog-piano/
   <button id="start-audio" style="display:none;margin-bottom:8px;">Enable Sound</button>
 </div>
 
-<!-- p5 core + sound addon -->
-<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/addons/p5.sound.min.js"></script>
-
+<!--
+  FIX (2026-07): this project previously depended on p5.js + p5.sound from the
+  jsdelivr CDN. When those scripts failed to load, the keyboard never rendered
+  and the page was just a title. Rewritten in plain Canvas 2D + WebAudio —
+  zero external dependencies, same keyboard, same frog, same sound.
+-->
 <script>
-/* ========================
-   CONFIG / CONSTANTS
-======================== */
-const OCTAVES = 2;          // full keyboard width (2 octaves: C4..B5)
-const START_MIDI = 60;      // C4
-const PIANO_H = 120;        // white key height
-const BLACK_H = 0.65;       // % of white height
-const BLACK_W = 0.62;       // % of white width
-const ATTACK = 0.02;        // osc envelope seconds
-const RELEASE = 0.25;
-const GRAVITY = 0.48;
-const HOP_VY = -12.5;
-const MAX_VX = 7.0;
+(function () {
+  'use strict';
 
-/* ========================
-   STATE
-======================== */
-let cnv, osc = null;
-let keysY = 0;
-let keysWhite = [];   // white keys: {x,y,w,h,midi,freq,name,activeUntil}
-let keysBlack = [];   // black keys: same, drawn after whites
-let frog = null;      // {x,y,vx,vy,r,onGround,blinkUntil}
+  /* ========================
+     CONFIG / CONSTANTS
+  ======================== */
+  const OCTAVES = 2;          // full keyboard width (2 octaves: C4..B5)
+  const START_MIDI = 60;      // C4
+  const PIANO_H = 120;        // white key height
+  const BLACK_H = 0.65;       // % of white height
+  const BLACK_W = 0.62;       // % of white width
+  const ATTACK = 0.02;        // envelope seconds
+  const RELEASE = 0.25;
+  const NOTE_AMP = 0.65;
+  const GRAVITY = 0.48;
+  const HOP_VY = -12.5;
+  const MAX_VX = 7.0;
 
-/* ========================
-   UTIL
-======================== */
-function midiFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
-function noteName(m) {
-  const N = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-  return N[m % 12] + (Math.floor(m/12) - 1);
-}
+  /* ========================
+     STATE
+  ======================== */
+  const container = document.getElementById('frog-piano-container');
+  if (!container) return;
 
-function ensureAudio() {
-  try {
-    if (typeof userStartAudio === "function") {
-      userStartAudio();
-    }
-  } catch(e) {
-    console.log("userStartAudio not available:", e);
+  const canvas = document.createElement('canvas');
+  canvas.style.display = 'block';
+  canvas.style.touchAction = 'none'; // don't scroll when tapping keys
+  container.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  let W = 640, H = 352;
+  let keysY = 0;
+  let keysWhite = [];   // {x,y,w,h,midi,freq,name,activeUntil}
+  let keysBlack = [];
+  let frog = null;      // {x,y,vx,vy,r,onGround,blinkUntil}
+
+  // WebAudio
+  let audioCtx = null, oscNode = null, gainNode = null;
+
+  /* ========================
+     UTIL
+  ======================== */
+  function midiFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+  function noteName(m) {
+    const N = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+    return N[m % 12] + (Math.floor(m / 12) - 1);
   }
+  function constrain(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function now() { return performance.now(); }
 
-  const ctx = typeof getAudioContext === "function" ? getAudioContext() : null;
-  if (ctx) {
-    if (ctx.state === "suspended") {
-      ctx.resume().catch(e => console.log("Resume failed:", e));
-    }
-  }
-
-  if (!osc) {
+  /* ========================
+     AUDIO (WebAudio, was p5.sound)
+  ======================== */
+  function ensureAudio() {
     try {
-      osc = new p5.Oscillator("sine");
-      osc.start();
-      osc.amp(0);
-    } catch(e) {
-      console.error("Failed to create oscillator:", e);
-    }
-  }
-
-  const btn = document.getElementById("start-audio");
-  if (btn) btn.style.display = "none";
-}
-
-/* ========================
-   LAYOUT
-======================== */
-function createOrResizeCanvas() {
-  const container = document.getElementById("frog-piano-container");
-  const maxW = Math.min((container?.clientWidth || 640), 1000);
-  const w = Math.max(300, maxW); // Reduced minimum from 420 to 300 for mobile
-  const h = Math.round(w * 0.55); // aspect
-  if (!cnv) {
-    cnv = createCanvas(w, h);
-    cnv.parent("frog-piano-container");
-  } else {
-    resizeCanvas(w, h);
-  }
-}
-
-function buildKeyboard() {
-  keysWhite = [];
-  keysBlack = [];
-  keysY = height - PIANO_H;
-
-  // white offsets and black offsets per octave (semitones from C)
-  const whiteOff = [0, 2, 4, 5, 7, 9, 11];       // C D E F G A B
-  const blackPairs = [ [1,0], [3,1], [6,3], [8,4], [10,5] ];
-  // blackPairs: [semitone offset, index of preceding white key]
-
-  const totalWhite = OCTAVES * 7;
-  const wW = width / totalWhite;                 // white key width
-  const bW = wW * BLACK_W;                       // black key width
-  const bH = PIANO_H * BLACK_H;
-
-  // Build whites
-  for (let o = 0; o < OCTAVES; o++) {
-    for (let i = 0; i < whiteOff.length; i++) {
-      const midi = START_MIDI + o*12 + whiteOff[i];
-      const idx = o*7 + i;
-      const x = idx * wW;
-      keysWhite.push({
-        x, y: keysY, w: wW, h: PIANO_H,
-        midi, freq: midiFreq(midi), name: noteName(midi),
-        activeUntil: 0
-      });
-    }
-  }
-  // Build blacks (positioned between whites)
-  for (let o = 0; o < OCTAVES; o++) {
-    for (const [off, prevWhiteIdx] of blackPairs) {
-      const midi = START_MIDI + o*12 + off;
-      const whiteIdx = o*7 + prevWhiteIdx;
-      const baseX = keysWhite[whiteIdx].x;
-      const xCenter = baseX + wW * 0.7;        // typical piano spacing
-      const x = xCenter - bW/2;
-      keysBlack.push({
-        x, y: keysY, w: bW, h: bH,
-        midi, freq: midiFreq(midi), name: noteName(midi),
-        activeUntil: 0
-      });
-    }
-  }
-}
-
-/* ========================
-   FROG DRAWING
-======================== */
-function drawFrog() {
-  const f = frog;
-
-  // body shadow
-  noStroke();
-  fill(28, 130, 28);
-  ellipse(f.x, f.y + f.r*0.25, f.r*1.8, f.r*1.2);
-
-  // belly
-  fill(200, 235, 200);
-  ellipse(f.x, f.y + f.r*0.15, f.r*1.25, f.r*0.9);
-
-  // body
-  fill(40, 180, 40);
-  ellipse(f.x, f.y, f.r*1.6, f.r*1.2);
-
-  // head
-  ellipse(f.x, f.y - f.r*0.8, f.r*1.5, f.r*1.2);
-
-  // legs (back)
-  stroke(28,120,28);
-  strokeWeight(6);
-  noFill();
-  // left leg
-  bezier(f.x - f.r*0.9, f.y + f.r*0.2, f.x - f.r*1.3, f.y + f.r*0.6,
-         f.x - f.r*0.8, f.y + f.r*0.9, f.x - f.r*0.3, f.y + f.r*0.7);
-  // right leg
-  bezier(f.x + f.r*0.9, f.y + f.r*0.2, f.x + f.r*1.3, f.y + f.r*0.6,
-         f.x + f.r*0.8, f.y + f.r*0.9, f.x + f.r*0.3, f.y + f.r*0.7);
-
-  // arms
-  stroke(34,150,34);
-  line(f.x - f.r*0.8, f.y - f.r*0.15, f.x - f.r*1.0, f.y + f.r*0.2);
-  line(f.x + f.r*0.8, f.y - f.r*0.15, f.x + f.r*1.0, f.y + f.r*0.2);
-
-  // toes
-  strokeWeight(4);
-  for (const dx of [-1,0,1]) {
-    line(f.x - f.r*1.05 + dx*3, f.y + f.r*0.22, f.x - f.r*1.2 + dx*5, f.y + f.r*0.35);
-    line(f.x + f.r*1.05 + dx*3, f.y + f.r*0.22, f.x + f.r*1.2 + dx*5, f.y + f.r*0.35);
-  }
-
-  // eyes
-  noStroke();
-  const blink = millis() < f.blinkUntil;
-  if (!blink) {
-    fill(255);
-    ellipse(f.x - f.r*0.45, f.y - f.r*1.1, f.r*0.45, f.r*0.45);
-    ellipse(f.x + f.r*0.45, f.y - f.r*1.1, f.r*0.45, f.r*0.45);
-    fill(0);
-    ellipse(f.x - f.r*0.45, f.y - f.r*1.1, f.r*0.18, f.r*0.18);
-    ellipse(f.x + f.r*0.45, f.y - f.r*1.1, f.r*0.18, f.r*0.18);
-  } else {
-    fill(40,180,40);
-    rect(f.x - f.r*0.65, f.y - f.r*1.15, f.r*0.5, 4, 2);
-    rect(f.x + f.r*0.15, f.y - f.r*1.15, f.r*0.5, 4, 2);
-  }
-
-  // mouth (smile)
-  noFill(); stroke(100,50,50); strokeWeight(3);
-  arc(f.x, f.y - f.r*0.7, f.r*0.8, f.r*0.5, 0.2, PI-0.2);
-}
-
-function blinkFrog() {
-  if (random() < 0.02) frog.blinkUntil = millis() + 120;
-}
-
-/* ========================
-   P5 LIFECYCLE
-======================== */
-function setup() {
-  createOrResizeCanvas();
-  buildKeyboard();
-
-  frog = {
-    x: width * 0.5,
-    y: (height - PIANO_H) - 24,
-    vx: 0, vy: 0,
-    r: 22,
-    onGround: true,
-    blinkUntil: 0
-  };
-
-  const btn = document.getElementById("start-audio");
-  if (btn) {
-    btn.addEventListener("click", ensureAudio);
-    // Check if we need to show the button
-    setTimeout(() => {
-      const ctx = typeof getAudioContext === "function" ? getAudioContext() : null;
-      if (ctx && ctx.state === "suspended") {
-        btn.style.display = "inline-block";
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        audioCtx = new AC();
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0;
+        oscNode = audioCtx.createOscillator();
+        oscNode.type = 'sine';
+        oscNode.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscNode.start();
       }
-    }, 100);
-  }
-}
-
-function windowResized() {
-  createOrResizeCanvas();
-  buildKeyboard();
-  frog.y = Math.min(frog.y, (height - PIANO_H) - frog.r*0.2);
-}
-
-function draw() {
-  background(24);
-
-  // draw keyboard (whites then blacks)
-  drawWhites();
-  drawBlacks();
-
-  // frog physics + render
-  physics();
-  drawFrog();
-  blinkFrog();
-
-  // hint
-  noStroke(); fill(200); textAlign(CENTER);
-  textSize(14);
-  text("Click or tap keys. Two octaves (C4 .. B5).", width/2, 22);
-}
-
-/* ========================
-   DRAW KEYS
-======================== */
-function drawWhites() {
-  textAlign(CENTER, CENTER);
-  textSize(14);
-  for (const k of keysWhite) {
-    const active = millis() < k.activeUntil;
-    stroke(60); strokeWeight(2);
-    fill(active ? 235 : 250);
-    rect(k.x, k.y, k.w, k.h);
-    noStroke(); fill(40);
-    text(k.name.replace(/[0-9]/g,""), k.x + k.w/2, k.y + k.h - 18);
-  }
-}
-
-function drawBlacks() {
-  for (const k of keysBlack) {
-    const active = millis() < k.activeUntil;
-    noStroke();
-    fill(active ? 35 : 10);
-    rect(k.x, k.y, k.w, k.h);
-  }
-}
-
-/* ========================
-   INPUT / SOUND
-======================== */
-function hitKey(mx, my) {
-  // prioritize black keys (they visually sit on top)
-  for (let i = 0; i < keysBlack.length; i++) {
-    const k = keysBlack[i];
-    if (mx > k.x && mx < k.x+k.w && my > k.y && my < k.y+k.h) return {k, isBlack:true};
-  }
-  for (let i = 0; i < keysWhite.length; i++) {
-    const k = keysWhite[i];
-    if (mx > k.x && mx < k.x+k.w && my > k.y && my < k.y+k.h) return {k, isBlack:false};
-  }
-  return null;
-}
-
-function activateKeyObj(k) {
-  ensureAudio();
-  if (osc) {
-    osc.freq(k.freq);
-    osc.amp(0.65, ATTACK);
-  }
-  k.activeUntil = millis() + 160;
-
-  // Frog hops toward center of that key
-  const targetX = k.x + k.w/2;
-  const dx = targetX - frog.x;
-  frog.vx = constrain(dx / 10, -MAX_VX, MAX_VX);
-  frog.vy = HOP_VY - random(0, 2.0);
-  frog.onGround = false;
-}
-
-function mousePressed() {
-  const h = hitKey(mouseX, mouseY);
-  if (h) activateKeyObj(h.k);
-  return false;
-}
-function mouseReleased() { if (osc) osc.amp(0, RELEASE); }
-function touchStarted()  { return mousePressed(); }
-function touchEnded()    { mouseReleased(); return false; }
-
-/* ========================
-   PHYSICS
-======================== */
-function physics() {
-  if (!frog.onGround) {
-    frog.vy += GRAVITY;
-    frog.x  += frog.vx;
-    frog.y  += frog.vy;
-
-    // land on keys
-    const top = height - PIANO_H;
-    if (frog.y + frog.r >= top) {
-      frog.y = top - frog.r;
-      frog.vy = 0;
-      frog.vx *= 0.45;
-      frog.onGround = true;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(function (e) { console.log('Resume failed:', e); });
+      }
+    } catch (e) {
+      console.error('Failed to start audio:', e);
     }
-    // walls
-    if (frog.x - frog.r < 0) { frog.x = frog.r; frog.vx *= -0.4; }
-    if (frog.x + frog.r > width) { frog.x = width - frog.r; frog.vx *= -0.4; }
+
+    const btn = document.getElementById('start-audio');
+    if (btn) btn.style.display = 'none';
   }
-}
+
+  function noteOn(freq) {
+    if (!audioCtx || !gainNode || !oscNode) return;
+    const t = audioCtx.currentTime;
+    oscNode.frequency.setValueAtTime(freq, t);
+    gainNode.gain.cancelScheduledValues(t);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, t);
+    gainNode.gain.linearRampToValueAtTime(NOTE_AMP, t + ATTACK);
+  }
+
+  function noteOff() {
+    if (!audioCtx || !gainNode) return;
+    const t = audioCtx.currentTime;
+    gainNode.gain.cancelScheduledValues(t);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, t);
+    gainNode.gain.linearRampToValueAtTime(0, t + RELEASE);
+  }
+
+  /* ========================
+     LAYOUT
+  ======================== */
+  function resizeCanvas() {
+    const maxW = Math.min((container.clientWidth || 640), 1000);
+    W = Math.max(300, maxW);
+    H = Math.round(W * 0.55); // aspect
+    canvas.width = W;
+    canvas.height = H;
+  }
+
+  function buildKeyboard() {
+    keysWhite = [];
+    keysBlack = [];
+    keysY = H - PIANO_H;
+
+    // white offsets and black offsets per octave (semitones from C)
+    const whiteOff = [0, 2, 4, 5, 7, 9, 11];       // C D E F G A B
+    const blackPairs = [ [1,0], [3,1], [6,3], [8,4], [10,5] ];
+    // blackPairs: [semitone offset, index of preceding white key]
+
+    const totalWhite = OCTAVES * 7;
+    const wW = W / totalWhite;                   // white key width
+    const bW = wW * BLACK_W;                     // black key width
+    const bH = PIANO_H * BLACK_H;
+
+    // Build whites
+    for (let o = 0; o < OCTAVES; o++) {
+      for (let i = 0; i < whiteOff.length; i++) {
+        const midi = START_MIDI + o * 12 + whiteOff[i];
+        const idx = o * 7 + i;
+        const x = idx * wW;
+        keysWhite.push({
+          x: x, y: keysY, w: wW, h: PIANO_H,
+          midi: midi, freq: midiFreq(midi), name: noteName(midi),
+          activeUntil: 0
+        });
+      }
+    }
+    // Build blacks (positioned between whites)
+    for (let o = 0; o < OCTAVES; o++) {
+      for (const pair of blackPairs) {
+        const off = pair[0], prevWhiteIdx = pair[1];
+        const midi = START_MIDI + o * 12 + off;
+        const whiteIdx = o * 7 + prevWhiteIdx;
+        const baseX = keysWhite[whiteIdx].x;
+        const xCenter = baseX + wW * 0.7;      // typical piano spacing
+        const x = xCenter - bW / 2;
+        keysBlack.push({
+          x: x, y: keysY, w: bW, h: bH,
+          midi: midi, freq: midiFreq(midi), name: noteName(midi),
+          activeUntil: 0
+        });
+      }
+    }
+  }
+
+  /* ========================
+     DRAW HELPERS
+  ======================== */
+  function ellipse(x, y, w, h) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function strokeLine(x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+  function strokeBezier(x1, y1, cx1, cy1, cx2, cy2, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.bezierCurveTo(cx1, cy1, cx2, cy2, x2, y2);
+    ctx.stroke();
+  }
+
+  /* ========================
+     FROG DRAWING
+  ======================== */
+  function drawFrog() {
+    const f = frog;
+
+    // body shadow
+    ctx.fillStyle = 'rgb(28,130,28)';
+    ellipse(f.x, f.y + f.r * 0.25, f.r * 1.8, f.r * 1.2);
+
+    // belly
+    ctx.fillStyle = 'rgb(200,235,200)';
+    ellipse(f.x, f.y + f.r * 0.15, f.r * 1.25, f.r * 0.9);
+
+    // body
+    ctx.fillStyle = 'rgb(40,180,40)';
+    ellipse(f.x, f.y, f.r * 1.6, f.r * 1.2);
+
+    // head
+    ellipse(f.x, f.y - f.r * 0.8, f.r * 1.5, f.r * 1.2);
+
+    // legs (back)
+    ctx.strokeStyle = 'rgb(28,120,28)';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    // left leg
+    strokeBezier(f.x - f.r * 0.9, f.y + f.r * 0.2, f.x - f.r * 1.3, f.y + f.r * 0.6,
+                 f.x - f.r * 0.8, f.y + f.r * 0.9, f.x - f.r * 0.3, f.y + f.r * 0.7);
+    // right leg
+    strokeBezier(f.x + f.r * 0.9, f.y + f.r * 0.2, f.x + f.r * 1.3, f.y + f.r * 0.6,
+                 f.x + f.r * 0.8, f.y + f.r * 0.9, f.x + f.r * 0.3, f.y + f.r * 0.7);
+
+    // arms
+    ctx.strokeStyle = 'rgb(34,150,34)';
+    strokeLine(f.x - f.r * 0.8, f.y - f.r * 0.15, f.x - f.r * 1.0, f.y + f.r * 0.2);
+    strokeLine(f.x + f.r * 0.8, f.y - f.r * 0.15, f.x + f.r * 1.0, f.y + f.r * 0.2);
+
+    // toes
+    ctx.lineWidth = 4;
+    for (const dx of [-1, 0, 1]) {
+      strokeLine(f.x - f.r * 1.05 + dx * 3, f.y + f.r * 0.22, f.x - f.r * 1.2 + dx * 5, f.y + f.r * 0.35);
+      strokeLine(f.x + f.r * 1.05 + dx * 3, f.y + f.r * 0.22, f.x + f.r * 1.2 + dx * 5, f.y + f.r * 0.35);
+    }
+
+    // eyes
+    const blink = now() < f.blinkUntil;
+    if (!blink) {
+      ctx.fillStyle = '#fff';
+      ellipse(f.x - f.r * 0.45, f.y - f.r * 1.1, f.r * 0.45, f.r * 0.45);
+      ellipse(f.x + f.r * 0.45, f.y - f.r * 1.1, f.r * 0.45, f.r * 0.45);
+      ctx.fillStyle = '#000';
+      ellipse(f.x - f.r * 0.45, f.y - f.r * 1.1, f.r * 0.18, f.r * 0.18);
+      ellipse(f.x + f.r * 0.45, f.y - f.r * 1.1, f.r * 0.18, f.r * 0.18);
+    } else {
+      ctx.fillStyle = 'rgb(40,180,40)';
+      ctx.fillRect(f.x - f.r * 0.65, f.y - f.r * 1.15, f.r * 0.5, 4);
+      ctx.fillRect(f.x + f.r * 0.15, f.y - f.r * 1.15, f.r * 0.5, 4);
+    }
+
+    // mouth (smile)
+    ctx.strokeStyle = 'rgb(100,50,50)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(f.x, f.y - f.r * 0.7, f.r * 0.4, f.r * 0.25, 0, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+  }
+
+  function blinkFrog() {
+    if (Math.random() < 0.02) frog.blinkUntil = now() + 120;
+  }
+
+  /* ========================
+     DRAW KEYS
+  ======================== */
+  function drawWhites() {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '14px sans-serif';
+    for (const k of keysWhite) {
+      const active = now() < k.activeUntil;
+      ctx.fillStyle = active ? 'rgb(235,235,235)' : 'rgb(250,250,250)';
+      ctx.strokeStyle = 'rgb(60,60,60)';
+      ctx.lineWidth = 2;
+      ctx.fillRect(k.x, k.y, k.w, k.h);
+      ctx.strokeRect(k.x, k.y, k.w, k.h);
+      ctx.fillStyle = 'rgb(40,40,40)';
+      ctx.fillText(k.name.replace(/[0-9]/g, ''), k.x + k.w / 2, k.y + k.h - 18);
+    }
+  }
+
+  function drawBlacks() {
+    for (const k of keysBlack) {
+      const active = now() < k.activeUntil;
+      ctx.fillStyle = active ? 'rgb(35,35,35)' : 'rgb(10,10,10)';
+      ctx.fillRect(k.x, k.y, k.w, k.h);
+    }
+  }
+
+  /* ========================
+     INPUT / SOUND
+  ======================== */
+  function hitKey(mx, my) {
+    // prioritize black keys (they visually sit on top)
+    for (let i = 0; i < keysBlack.length; i++) {
+      const k = keysBlack[i];
+      if (mx > k.x && mx < k.x + k.w && my > k.y && my < k.y + k.h) return k;
+    }
+    for (let i = 0; i < keysWhite.length; i++) {
+      const k = keysWhite[i];
+      if (mx > k.x && mx < k.x + k.w && my > k.y && my < k.y + k.h) return k;
+    }
+    return null;
+  }
+
+  function activateKey(k) {
+    ensureAudio();
+    noteOn(k.freq);
+    k.activeUntil = now() + 160;
+
+    // Frog hops toward center of that key
+    const targetX = k.x + k.w / 2;
+    const dx = targetX - frog.x;
+    frog.vx = constrain(dx / 10, -MAX_VX, MAX_VX);
+    frog.vy = HOP_VY - Math.random() * 2.0;
+    frog.onGround = false;
+  }
+
+  function canvasPoint(e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * (canvas.width / r.width),
+      y: (e.clientY - r.top) * (canvas.height / r.height)
+    };
+  }
+
+  canvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    const p = canvasPoint(e);
+    const k = hitKey(p.x, p.y);
+    if (k) activateKey(k);
+  });
+  window.addEventListener('pointerup', noteOff);
+  window.addEventListener('pointercancel', noteOff);
+
+  /* ========================
+     PHYSICS
+  ======================== */
+  function physics() {
+    if (!frog.onGround) {
+      frog.vy += GRAVITY;
+      frog.x  += frog.vx;
+      frog.y  += frog.vy;
+
+      // land on keys
+      const top = H - PIANO_H;
+      if (frog.y + frog.r >= top) {
+        frog.y = top - frog.r;
+        frog.vy = 0;
+        frog.vx *= 0.45;
+        frog.onGround = true;
+      }
+      // walls
+      if (frog.x - frog.r < 0) { frog.x = frog.r; frog.vx *= -0.4; }
+      if (frog.x + frog.r > W) { frog.x = W - frog.r; frog.vx *= -0.4; }
+    }
+  }
+
+  /* ========================
+     MAIN LOOP
+  ======================== */
+  function frame() {
+    ctx.fillStyle = 'rgb(24,24,24)';
+    ctx.fillRect(0, 0, W, H);
+
+    drawWhites();
+    drawBlacks();
+
+    physics();
+    drawFrog();
+    blinkFrog();
+
+    ctx.fillStyle = 'rgb(200,200,200)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Click or tap keys. Two octaves (C4 .. B5).', W / 2, 22);
+
+    requestAnimationFrame(frame);
+  }
+
+  function init() {
+    resizeCanvas();
+    buildKeyboard();
+
+    frog = {
+      x: W * 0.5,
+      y: (H - PIANO_H) - 24,
+      vx: 0, vy: 0,
+      r: 22,
+      onGround: true,
+      blinkUntil: 0
+    };
+
+    const btn = document.getElementById('start-audio');
+    if (btn) {
+      btn.addEventListener('click', ensureAudio);
+      // If the browser is blocking audio until a gesture, offer the button
+      setTimeout(function () {
+        if (audioCtx && audioCtx.state === 'suspended') {
+          btn.style.display = 'inline-block';
+        }
+      }, 100);
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', function () {
+    resizeCanvas();
+    buildKeyboard();
+    frog.y = Math.min(frog.y, (H - PIANO_H) - frog.r * 0.2);
+  });
+
+  init();
+})();
 </script>
