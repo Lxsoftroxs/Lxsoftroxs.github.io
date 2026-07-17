@@ -5,14 +5,62 @@ permalink: /patrons/
 ---
 
 <h1>Patron Wishlist</h1>
-<p>Here are some cool trinkets I’d love to have. Check out my wishlist below:</p>
+<p>Here are some cool trinkets I'd love to have. Check out my wishlist below:</p>
 
-<iframe
-  src="{{ '/assets/Comprehensive_Wishlist.pdf' | relative_url }}"
-  title="Patron Wishlist PDF"
-  width="100%"
-  height="600px"
-  style="border: none;">
-  This browser does not support PDFs. Please download the PDF to view it: 
-  <a href="{{ '/assets/Comprehensive_Wishlist.pdf' | relative_url }}">Download PDF</a>.
-</iframe>
+<!--
+  FIX (2026-07): the wishlist used to be an <iframe> embedding the PDF.
+  Embedded PDF viewers fail silently in many browsers (mobile Safari, most
+  Android browsers, strict iframes) showing a dead gray box, and the iframe's
+  fallback text only appears when iframes themselves are unsupported — not
+  when PDF rendering fails. Replaced with a native table that works on every
+  device; the original PDF remains available below.
+-->
+
+<div class="wishlist-wrap">
+  <table class="wishlist">
+    <thead>
+      <tr><th>Item</th><th>Price</th><th>Source</th><th>Link</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Koss KSC75 Ear Clip Headphones</td><td>$24.99</td><td>Koss</td><td><a href="https://www.koss.com/products/ksc75" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Framework Laptop 16 (DIY Edition)</td><td>$2,057</td><td>Framework</td><td><a href="https://frame.work/products/laptop16-diy-amd-7040" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Sony Discman D-33 CD Player</td><td>Varies</td><td>eBay</td><td><a href="https://www.ebay.com/sch/i.html?_nkw=sony+discman+d-33" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>KOSS Headphone Metal Headband Upgrade Kit</td><td>$33</td><td>eBay</td><td><a href="https://www.ebay.com/itm/175950656168" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Moondrop CHU II IEMs</td><td>$20.69</td><td>Amazon</td><td><a href="https://www.amazon.com/dp/B0BY5V5J4M" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>FiiO Echo Mini HiFi MP3 Player</td><td>~$50</td><td>Amazon</td><td><a href="https://www.amazon.com/dp/B0CL9T2MKT" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Ortho Layout Keypad Mod (Custom DIY)</td><td>N/A</td><td>Reddit</td><td><a href="https://www.reddit.com/r/framework/comments/1ba1dnf/poor_mans_ortho/" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>DC-ROMA RISC-V Mainboard II</td><td>$9.90</td><td>DeepComputing</td><td><a href="https://store.deepcomputing.io/products/dc-roma-risc-v-mainboard-ii" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Mitsubishi Uni-Ball One P Gel Pen (Hakka)</td><td>$6.70</td><td>Amazon</td><td><a href="https://www.amazon.com/dp/B09R8N4LVD" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>BUDI 20W 18650 Battery Fast Charger</td><td>$19.95</td><td>eBay</td><td><a href="https://www.ebay.com/itm/204684942471" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>LG INR18650MJ1 3500mAh Battery</td><td>$6.49</td><td>18650BatteryStore</td><td><a href="https://www.18650batterystore.com/products/lg-inr18650mj1" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Orange Pi RV2 (8GB RAM, RISC-V)</td><td>$49.90</td><td>AliExpress</td><td><a href="https://www.aliexpress.us/item/3256806420376672.html" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>AE1200 Metal Stainless Steel Bezel Mod Case</td><td>$22.25</td><td>AliExpress</td><td><a href="https://www.aliexpress.us/item/3256808284970573.html" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Any CRT TV (12v preferred)</td><td>Varies</td><td>Craigslist</td><td><a href="https://slo.craigslist.org/ele/d/san-luis-obispo-12v-tv-and-12v-vcr/7724966104.html" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Framework Laptop Max+ 395 (64GB/128GB)</td><td>$1,999</td><td>Framework</td><td><a href="https://frame.work/products/laptop-16-amd" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>2nd SATA HDD/SSD Optical Caddy (ThinkPad W510/W520/W530)</td><td>$6.56</td><td>AliExpress</td><td><a href="https://www.aliexpress.us/item/3256808284971930.html" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Handmade Mini Knife Pendant (Damascus Steel)</td><td>$176.00</td><td>Etsy</td><td><a href="https://www.etsy.com/listing/1529041626/handmade-mini-knife-pendant-real" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>7.4V–60V Ternary Lithium Battery Pack (18650)</td><td>$28.00</td><td>Alibaba</td><td><a href="https://www.alibaba.com/product-detail/7-4v-12v-24v-36v-48v_1600790114727.html" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Ecosteno Entry-Level Stenography Keyboard</td><td>$120.00</td><td>Nolltronics</td><td><a href="https://nolltronics.com/products/ecosteno" target="_blank" rel="noopener">View</a></td></tr>
+      <tr><td>Audio-Technica Sound Burger Turntable (Yellow)</td><td>~$199</td><td>Amazon</td><td><a href="https://www.amazon.com/dp/B0BXQPBX55" target="_blank" rel="noopener">View</a></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="wishlist-pdf-link">
+  Prefer the original? <a href="{{ '/assets/Comprehensive_Wishlist.pdf' | relative_url }}" target="_blank" rel="noopener">Open the wishlist PDF</a>.
+</p>
+
+<style>
+  .wishlist-wrap { overflow-x: auto; margin: 1.2em 0; }
+  .wishlist { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+  .wishlist th, .wishlist td {
+    padding: 0.5em 0.75em;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    text-align: left;
+  }
+  .wishlist thead th { border-bottom-width: 2px; }
+  .wishlist tbody tr:nth-child(even) { background: rgba(128, 128, 128, 0.08); }
+  .wishlist td:nth-child(2) { white-space: nowrap; }
+  .wishlist td:last-child, .wishlist th:last-child { text-align: center; }
+  .wishlist-pdf-link { opacity: 0.85; font-size: 0.95em; }
+</style>
