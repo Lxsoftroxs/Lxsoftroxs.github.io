@@ -8,11 +8,18 @@
  *
  * Uses IntersectionObserver on a sentinel div at the bottom of the gallery
  * (rootMargin: 600px) so the next batch is ready before the user reaches it.
+ *
+ * FIX (2026-07): images previously rendered as a 1px placeholder with the
+ * real URL in data-src, relying on site-optimizations.js to swap it in.
+ * That script snapshots the DOM once on DOMContentLoaded, so every
+ * dynamically-inserted polaroid kept its placeholder forever (blank white
+ * cards). We now set img.src directly — native loading="lazy" still defers
+ * the network fetch until the image nears the viewport, and the virtual
+ * batching above still keeps the DOM small, so nothing is lost.
  */
 (function () {
   const BATCH       = 12;
   const ROOT_MARGIN = '600px';
-  const PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 
   document.addEventListener('DOMContentLoaded', function () {
     const dataEl  = document.getElementById('diary-data');
@@ -28,9 +35,7 @@
       fig.dataset.id = p.id;
 
       const img = document.createElement('img');
-      img.className = 'js-lazy-image';
-      img.src       = PLACEHOLDER;
-      img.dataset.src = p.src;
+      img.src       = p.src;   // real URL; native lazy-loading defers the fetch
       img.alt       = p.caption;
       img.loading   = 'lazy';
       img.decoding  = 'async';
