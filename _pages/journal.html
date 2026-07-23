@@ -20,7 +20,7 @@ permalink: /journal/
   {% for entry in site.journal %}
   {
     "date": "{{ entry.date | date: '%Y-%m-%d' }}",
-    "title": "{{ entry.title | escape }}",
+    "title": {{ entry.title | default: "" | jsonify }},
     "url": "{{ entry.url | relative_url }}"
   }{% unless forloop.last %},{% endunless %}
   {% endfor %}
