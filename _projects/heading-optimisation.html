@@ -1,0 +1,320 @@
+---
+title: "Heading Optimisation – Browser Demo"
+layout: default
+permalink: /projects/heading-optimisation/
+---
+
+<!-- Controls -->
+<div class="row" id="ui" style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;background:#222;padding:1rem;border-radius:.75rem">
+  <label>Known <input id="nk" type="number" min="1" max="20" value="10" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <label>Unknown <input id="nu" type="number" min="0" max="30" value="10" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <label>v<sub>walk</sub> <input id="vw" type="number" min="0.1" step="0.1" value="1" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <label>v<sub>road</sub> <input id="vr" type="number" min="0.5" step="0.5" value="4" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <label>Grid N <input id="gN" type="number" min="60" max="200" value="120" style="width:5rem;background:#333;border:1px solid #555;border-radius:4px;color:#eee;padding:.25rem"></label>
+  <button id="run" style="background:#16a34a;color:#fff;padding:.4rem .8rem;border:none;border-radius:4px;font-weight:600;cursor:pointer">Run</button>
+</div>
+
+<!-- Plots -->
+<div id="tLim" class="plot" style="width:100%;height:420px;margin-top:1.5rem"></div>
+<div id="tFull" class="plot" style="width:100%;height:420px;margin-top:1.5rem"></div>
+<div id="world" class="plot" style="width:100%;height:420px;margin-top:1.5rem"></div>
+
+<!-- Plotly -->
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.30.0"></script>
+
+<script>
+/* ===== Basics ===== */
+const BOX = 1e3, RES = 720;
+const rand = (a,b) => Math.random()*(b-a)+a;
+const hp = (x,y) => Math.hypot(x,y);
+const randPt = (box) => [rand(0,box), rand(0,box)]; // <<< missing in your version
+
+/* ===== Road network ===== */
+function net(mask, pts, vR) {
+  const n = pts.length, r = [];
+  const W = Array.from({length:n}, (_,i)=>Array(n).fill(Infinity).map((v,j)=>i===j?0:v));
+  for (let a=0;a<mask.length;a++) {
+    const i = mask[a];
+    for (let b=0;b<a;b++) {
+      const j = mask[b], p = pts[i], q = pts[j];
+      const d = hp(p[0]-q[0], p[1]-q[1]);
+      W[i][j] = W[j][i] = d / vR;
+      r.push({ p, q, i, j, d });
+    }
+  }
+  return { r, W };
+}
+function floyd(D) {
+  const n = D.length, M = D.map(row=>row.slice());
+  for (let k=0;k<n;k++) for (let i=0;i<n;i++) for (let j=0;j<n;j++) {
+    const v = M[i][k] + M[k][j];
+    if (v < M[i][j]) M[i][j] = v;
+  }
+  return M;
+}
+
+/* ===== Geometry & heading search ===== */
+function ray(S, dir, R) {
+  let h = null, t = 1e9;
+  for (const e of R) {
+    const P=e.p, Q=e.q, w=[Q[0]-P[0], Q[1]-P[1]];
+    const A=[[dir[0],-w[0]], [dir[1],-w[1]]];
+    const b=[P[0]-S[0], P[1]-S[1]];
+    const det = A[0][0]*A[1][1] - A[0][1]*A[1][0];
+    if (Math.abs(det) < 1e-12) continue;
+    const ti=(b[0]*A[1][1]-b[1]*A[0][1])/det, ui=(A[0][0]*b[1]-A[1][0]*b[0])/det;
+    if (ti>0 && ui>=0 && ui<=1 && ti<t) { t=ti; h=[S[0]+ti*dir[0], S[1]+ti*dir[1]]; }
+  }
+  return { h, t };
+}
+function hybrid(r, hit, R, vW, vR, tDest) {
+  let best = 1e9;
+  for (const e of R) {
+    const d1 = hp(hit[0]-e.p[0], hit[1]-e.p[1]);
+    const d2 = e.d - d1;
+    best = Math.min(best,
+      d1/vR + tDest[e.i],
+      d2/vR + tDest[e.j]
+    );
+  }
+  return r/vW + best;
+}
+function optHead(S, R, pts, vW, vR, dest, tDest) {
+  let best = 1e9, bTh = 0;
+  for (let k=0;k<RES;k++) {
+    const th = k*2*Math.PI/RES, dir=[Math.cos(th), Math.sin(th)];
+    const {h,t} = ray(S, dir, R);
+    const T = h ? hybrid(t, h, R, vW, vR, tDest)
+                : hp(pts[dest][0]-S[0], pts[dest][1]-S[1]) / vW;
+    if (T < best) { best=T; bTh=th; }
+  }
+  return bTh;
+}
+
+/* ===== Time terrain (with road “valleys”) ===== */
+function terrain(pts, tDest, vW, vR, R, N) {
+  const ax=[...Array(N).keys()].map(i=>i*BOX/(N-1));
+  const Z=Array.from({length:N},()=>Array(N));
+  for (let ix=0; ix<N; ix++) for (let iy=0; iy<N; iy++) {
+    const x=ax[ix], y=ax[iy];
+    // direct to dest
+    let best = hp(x-pts[0][0], y-pts[0][1]) / vW;
+    // via POIs
+    for (let p=0; p<pts.length; p++) {
+      if (!isFinite(tDest[p])) continue;
+      const c = hp(x-pts[p][0], y-pts[p][1]) / vW + tDest[p];
+      if (c < best) best = c;
+    }
+    // via any point along each road
+    for (const e of R) {
+      const P=e.p, Q=e.q, v=[Q[0]-P[0], Q[1]-P[1]];
+      const len2 = v[0]*v[0] + v[1]*v[1];
+      if (!len2) continue;
+      let w=((x-P[0])*v[0] + (y-P[1])*v[1]) / len2;
+      w = Math.max(0, Math.min(1, w));
+      const xp=P[0]+w*v[0], yp=P[1]+w*v[1];
+      const walk = hp(x-xp, y-yp) / vW;
+      const dProj = w * e.d, dRem = e.d - dProj;
+      const bestEdge = Math.min(dProj/vR + tDest[e.i], dRem/vR + tDest[e.j]);
+      best = Math.min(best, walk + bestEdge);
+    }
+    Z[iy][ix] = best;
+  }
+  return { ax, Z };
+}
+
+/* ===== Plot helpers ===== */
+function srf(id, t, titleText) {
+  Plotly.newPlot(id, [{
+    z:t.Z, x:t.ax, y:t.ax, type:'surface', colorscale:'Turbo', showscale:false
+  }], {
+    title: titleText,
+    font:{color:'#eee'},
+    scene:{xaxis:{title:'x'}, yaxis:{title:'y'}, zaxis:{title:'t'}},
+    paper_bgcolor:'#111', plot_bgcolor:'#111'
+  }, {responsive:true});
+}
+function map(id, S, pts, R, pathL, pathF, nk) {
+  const tr=[];
+  // roads
+  R.forEach(e => tr.push({x:[e.p[0],e.q[0]], y:[e.p[1],e.q[1]], mode:'lines',
+                          line:{color:'#777',width:1}, opacity:.35, showlegend:false, hoverinfo:'skip'}));
+  // unknown POIs
+  const unk=[...Array(pts.length).keys()].slice(nk);
+  if (unk.length) tr.push({x:unk.map(i=>pts[i][0]), y:unk.map(i=>pts[i][1]), mode:'markers',
+                           marker:{symbol:'circle-open',size:10,color:'#2ecc71'}, name:'Unknown'});
+  // points & paths
+  tr.push(
+    {x:[pts[0][0]], y:[pts[0][1]], mode:'markers', marker:{symbol:'diamond',size:12,color:'#3498db'}, name:'Dest'},
+    {x:[S[0]],      y:[S[1]],      mode:'markers', marker:{symbol:'square', size:12,color:'#e74c3c'}, name:'Start'},
+    {x:pathL.map(p=>p[0]), y:pathL.map(p=>p[1]), mode:'lines', line:{width:3,color:'#e91e63'}, name:'Limited'},
+    {x:pathF.map(p=>p[0]), y:pathF.map(p=>p[1]), mode:'lines', line:{width:3,color:'#00e5ff'}, name:'Full'}
+  );
+  Plotly.newPlot(id, tr, {
+    title:'World',
+    font:{color:'#eee'},
+    xaxis:{range:[0,BOX], fixedrange:true},
+    yaxis:{range:[0,BOX], scaleanchor:'x', fixedrange:true},
+    paper_bgcolor:'#111', plot_bgcolor:'#111'
+  }, {responsive:true});
+}
+
+/* ===== Run driver ===== */
+async function run() {
+  btn.disabled = true;
+
+  const nk = +nkInp.value, nu = +nuInp.value, vW = +vwInp.value, vR = +vrInp.value, N = +gNInp.value;
+  const S = randPt(BOX);
+  const pts = Array.from({length:nk+nu}, () => randPt(BOX));
+  const dest = 0;
+
+  const lim = net([...Array(nk).keys()], pts, vR);
+  const ful = net([...Array(pts.length).keys()], pts, vR);
+
+  const tF = floyd(ful.W).map(r => r[dest]);
+  const tL = floyd(lim.W).map(r => r[dest]).concat(Array(nu).fill(Infinity));
+
+  const thL = optHead(S, lim.r, pts, vW, vR, dest, tL);
+  const thF = optHead(S, ful.r, pts, vW, vR, dest, tF);
+
+  const dirL=[Math.cos(thL), Math.sin(thL)];
+  const dirF=[Math.cos(thF), Math.sin(thF)];
+
+  const hitL = ray(S, dirL, lim.r).h || [S[0]+dirL[0]*50, S[1]+dirL[1]*50];
+  const hitF = ray(S, dirF, ful.r).h || [S[0]+dirF[0]*50, S[1]+dirF[1]*50];
+
+  srf('tLim',  terrain(pts, tL, vW, vR, lim.r, N),  'Limited');
+  srf('tFull', terrain(pts, tF, vW, vR, ful.r, N), 'Full');
+  map('world', S, pts, ful.r, [S, hitL], [S, hitF], nk);
+
+  btn.disabled = false;
+}
+
+/* DOM wires */
+const nkInp = document.getElementById('nk');
+const nuInp = document.getElementById('nu');
+const vwInp = document.getElementById('vw');
+const vrInp = document.getElementById('vr');
+const gNInp = document.getElementById('gN');
+const btn   = document.getElementById('run');
+
+btn.addEventListener('click', () => {
+  try { run(); } catch (e) { console.error(e); btn.disabled=false; }
+});
+
+// Optional: auto-run once on load
+document.addEventListener('DOMContentLoaded', () => { try { run(); } catch(e) { console.error(e); } });
+</script>
+
+<!-- Research Paper Section -->
+<div class="research-paper" style="margin-top:4rem;max-width:900px;margin-left:auto;margin-right:auto;padding:3rem 2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333;font-family:'Computer Modern Serif',Georgia,serif;line-height:1.8">
+  <div style="text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:2px solid #6df">
+    <div style="font-size:0.9em;color:#6df;margin-bottom:0.5rem;letter-spacing:2px">Patrick Shaw 2025</div>
+    <h2 style="font-size:2.2em;margin:0.5rem 0;color:#6df;font-weight:400;font-family:'Computer Modern Serif',Georgia,serif">Never Get Lost Again</h2>
+  </div>
+
+  <div style="color:#ddd;font-size:1.05em">
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      Do you ever wander the forest alone? Ever walk the streets while keeping your phone on silent? I believe wandering to be fundamental to human curiosity.
+    </p>
+
+    <blockquote style="border-left:3px solid #6df;padding-left:1.5rem;margin:2rem 0;font-style:italic;color:#aaa;background:rgba(0,0,0,0.3);padding:1.5rem;border-radius:4px">
+      "Once I know where I am, then the world becomes as narrow as a map. When I don't know, the world feels unlimited."
+      <span style="display:block;margin-top:0.5rem;font-size:0.9em;color:#888">― Liu Cixin, The Dark Forest</span>
+    </blockquote>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      When I read fantasy stories I ponder how people functioned before GPS or the detailed maps you find within libraries. With this question in mind I began to think, "Where do I go when I can't see every detail of my surroundings?" and my research was born.
+    </p>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      Developing the full question here: given a finite set of known <i>k</i><sup>⋆</sup> and unknown <i>k</i><sup>○</sup> points of interest on a finite section of <i>ℝ</i><sup>2</sup> space, the points are then connected by a geodesic line (Roads). Let a variable <i>ω</i> (walkspeed) describe the speed of travel on the plane; when your location is shared with the coordinates of the lines, set a new value for speed of travel <i>v</i> (roadspeed). Describe a relation between <i>ω</i> and <i>v</i> where <i>v</i> is greater. Determine your location of origin <i>P</i> and destination <i>Q</i>, with the information above determine the optimal heading angle <i>θ</i> when accounting for road jumps*.
+    </p>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      The conjecture I am forming: there is an algebraic equation to describe the optimal angle of heading, with a defined number of <i>K</i><sup>⋆</sup> and <i>K</i><sup>○</sup> POIs; or an unknown <i>P</i>, but only known POIs.
+    </p>
+
+    <h3 style="font-size:1.5em;margin-top:2.5rem;margin-bottom:1rem;color:#6df;font-weight:400">Research Approach</h3>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      Beginning my approach to this problem, I asked math professors how they would start. I was specifically seeking an equation that would take input variables of <i>k</i><sup>⋆</sup> and <i>k</i><sup>○</sup> POIs, <i>ω</i>, and <i>v</i>; that could then be converted into the <i>θ</i> of optimal direction of heading.
+    </p>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      The first step I took to create experimental data was forming an algorithm that could draw rays from <i>P</i> that then would describe the travel path with an output of time. By running the simulation code for every point coordinate on the finite plane as <i>P</i> with rays to all other coordinates, without changing the POI coordinates; I could build a three dimensional map that marks time as the extra dimension. The vertical axis would then be time, creating a topological map where the steepest descent described the fastest path, converting the algorithm into a calculus problem.
+    </p>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      Comparatively, I needed two maps per set of POIs to develop an understanding of how full knowledge and partial knowledge of all points would alter the <i>θ</i>. By relating the differing levels of information and paths, I could narrow the error margin down for the limited knowledge pathing. Then by randomizing the POIs and comparing the three dimensional maps, the angle of maximal descent, within the frame of reference of <i>P</i> and <i>Q</i>, could be approximated then compared with the initial conditions to form an equation.
+    </p>
+
+    <h3 style="font-size:1.5em;margin-top:2.5rem;margin-bottom:1rem;color:#6df;font-weight:400">Computational Foundations</h3>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      My journey through attempting mathematical research has been backed by many stories of computational simulations defining the data we begin with, only to compare with reality and rebuild and restructure. This topic was important to me as I enjoyed the brain teaser element, alongside my enjoyment of wandering cities until I got lost; I liked to challenge myself to find a path through any problem.
+    </p>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      To further expand on this research problem I will need to build a better analysis of the data that I have collected from simulations. Then to also learn more about probabilistic analysis for the alternate initial condition of an unknown origin.
+    </p>
+
+    <h3 style="font-size:1.5em;margin-top:2.5rem;margin-bottom:1rem;color:#6df;font-weight:400">Future Directions</h3>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      Broadening the scope of the research there are many more avenues that could be worked on, like path finding optimization computationally through the A* algorithm or the newer deterministic <i>O</i>(<i>m</i> log<sup>2/3</sup><i>n</i>)-time algorithm by Duan et al (2025). An increase in dimensions for the map terrain, curved roads, density of points generating faster roads, and/or a look into infinite dimensionality with infinite roads to see if the path integral is emergent or with roads of infinite speeds for a more mathematical approach to finding limits of directionality.
+    </p>
+
+    <p style="margin-bottom:1.5rem;text-indent:2em">
+      Fundamentally, the question seems significant to others as it can help those who are lost; however, I suspect it's a red herring as human ingenuity tends to trump mathematical analysis in real world scenarios. Some examples are following streams, listening for cars, or finding elevation. Time is one of our most finite resources, but is it philosophically flawed to optimize every second for its greatest potential within reality?
+    </p>
+
+    <hr style="border:none;border-top:1px solid #333;margin:2.5rem 0">
+
+    <p style="font-size:0.9em;color:#888;font-style:italic;margin-top:2rem">
+      *Road Jumps is the strategy to leave a road in order to join another road to optimize for the total time even with the slower walk speed between paths.
+    </p>
+  </div>
+</div>
+
+<style>
+body { background:#111; color:#eee; }
+h1, h2, h3 { color:#eee; }
+
+/* LaTeX-style typography */
+.research-paper {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.research-paper p {
+  text-align: justify;
+  hyphens: auto;
+}
+
+.research-paper i {
+  font-style: italic;
+  color: #6df;
+}
+
+.research-paper sup {
+  font-size: 0.75em;
+  vertical-align: super;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .research-paper {
+    padding: 2rem 1.5rem;
+  }
+
+  .research-paper h2 {
+    font-size: 1.8em !important;
+  }
+
+  .research-paper p {
+    text-indent: 1em !important;
+  }
+}
+</style>
