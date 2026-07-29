@@ -24,7 +24,7 @@
   var quoteEls = source.querySelectorAll('p');
   var quotes = [];
   for (var qi = 0; qi < quoteEls.length; qi++) {
-    var t = quoteEls[qi].innerText.trim();
+    var t = FX.readText(quoteEls[qi]);
     if (t) quotes.push(t);
   }
   if (!quotes.length) { FX.fallback(wrap, 'no quotes'); return; }

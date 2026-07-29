@@ -99,6 +99,53 @@
     return out;
   };
 
+  /* ══════════════════════════════════════════════════════════════
+     Text extraction
+
+     `innerText` is defined in terms of *rendered* text, so it returns an
+     empty string for anything inside a `visibility: hidden` subtree — and
+     the layout ships `<body class="no-flash">` with exactly that until
+     DOMContentLoaded. The effects used to get away with reading innerText
+     because awaiting a CDN module yielded long enough for the class to be
+     removed first; now that they start synchronously, they would read
+     nothing and fall back to plain text on every post.
+
+     This reads the same content straight from the DOM, so it does not care
+     whether the element is currently rendered.
+     ══════════════════════════════════════════════════════════════ */
+
+  function normalize(s) {
+    return s.replace(/[ \t\f\v]+/g, ' ')
+            .replace(/\r\n?/g, '\n')
+            .replace(/ *\n */g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+  }
+
+  FX.readText = function (el) {
+    if (!el) return '';
+
+    /* Work on a copy so <br> can be turned into real newlines, matching what
+       innerText would have produced. */
+    var clone = el.cloneNode(true);
+    var brs = clone.querySelectorAll('br');
+    for (var b = 0; b < brs.length; b++) {
+      brs[b].parentNode.replaceChild(global.document.createTextNode('\n'), brs[b]);
+    }
+
+    /* Block-level children become paragraphs separated by a blank line. */
+    var kids = clone.children;
+    if (kids.length) {
+      var parts = [];
+      for (var i = 0; i < kids.length; i++) {
+        var t = normalize(kids[i].textContent);
+        if (t) parts.push(t);
+      }
+      if (parts.length) return parts.join('\n\n');
+    }
+    return normalize(clone.textContent);
+  };
+
   /* Monospace advance width. Measured once per font, then cached. */
   var cwCache = Object.create(null);
   FX.charWidth = function (ctx, font) {

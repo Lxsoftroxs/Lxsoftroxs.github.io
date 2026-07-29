@@ -14,7 +14,7 @@
   var canvas = wrap.querySelector('.life-canvas');
   if (!source || !canvas) { FX.fallback(wrap, 'missing source or canvas'); return; }
 
-  var poemText = source.innerText.trim();
+  var poemText = FX.readText(source);
   if (!poemText) { FX.fallback(wrap, 'no text'); return; }
 
   var ctx = canvas.getContext('2d');

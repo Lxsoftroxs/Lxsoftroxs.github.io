@@ -11,7 +11,7 @@
   var canvas = wrap.querySelector('.wave-canvas');
   if (!source || !canvas) { FX.fallback(wrap, 'missing source or canvas'); return; }
 
-  var allText = source.innerText.trim();
+  var allText = FX.readText(source);
   if (!allText) { FX.fallback(wrap, 'no text'); return; }
 
   var ctx = canvas.getContext('2d');
