@@ -7,7 +7,7 @@ layout: default
   <div class="wave-ripple" data-wave>
     <div class="wave-source">{{ content }}</div>
     <canvas class="wave-canvas"></canvas>
-    <p class="wave-hint">click to send ripples &middot; hover to disturb</p>
+    <p class="wave-hint" data-fx-hint>click to send ripples &middot; hover to disturb</p>
   </div>
 </article>
 <hr>
@@ -20,4 +20,5 @@ layout: default
           async>
   </script>
 </section>
+<script defer src="{{ '/assets/js/fx-runtime.js' | relative_url }}"></script>
 <script defer src="{{ '/assets/js/wave-ripple.js' | relative_url }}"></script>

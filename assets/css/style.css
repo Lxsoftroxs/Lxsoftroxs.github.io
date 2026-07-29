@@ -492,7 +492,7 @@ img {
   min-height: 300px;
 }
 
-.poetry-life .poem-source {
+.poetry-life.fx-active .poem-source {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -529,7 +529,7 @@ img {
   min-height: 400px;
 }
 
-.quotes-gravity .quote-source {
+.quotes-gravity.fx-active .quote-source {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -583,7 +583,7 @@ img {
   min-height: 400px;
 }
 
-.matrix-rain .matrix-source {
+.matrix-rain.fx-active .matrix-source {
   position: absolute;
   width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0);
@@ -615,7 +615,7 @@ img {
   min-height: 400px;
 }
 
-.wave-ripple .wave-source {
+.wave-ripple.fx-active .wave-source {
   position: absolute;
   width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0);
@@ -647,7 +647,7 @@ img {
   min-height: 400px;
 }
 
-.constellation .constellation-source {
+.constellation.fx-active .constellation-source {
   position: absolute;
   width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0);
@@ -679,7 +679,7 @@ img {
   min-height: 400px;
 }
 
-.flame-ember .flame-source {
+.flame-ember.fx-active .flame-source {
   position: absolute;
   width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0);
@@ -711,7 +711,7 @@ img {
   min-height: 400px;
 }
 
-.typewriter-glitch .typewriter-source {
+.typewriter-glitch.fx-active .typewriter-source {
   position: absolute;
   width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0);
@@ -984,3 +984,103 @@ img {
   transition: background 0.2s ease, color 0.2s ease;
 }
 #load-more-diary:hover { background: #6df; color: #111; }
+
+/* ============================================================
+   Canvas text-effect controls & readability
+   ============================================================ */
+
+/* Effect canvases must never be wider than the screen, and must never trap
+   the page scroll. `pan-y` hands vertical gestures back to the scroller so a
+   full-height canvas can still be scrolled past with a finger; the effects
+   claim horizontal drags for themselves. */
+.life-canvas,
+.gravity-canvas,
+.matrix-canvas,
+.wave-canvas,
+.constellation-canvas,
+.flame-canvas,
+.typewriter-canvas {
+  max-width: 100%;
+  touch-action: pan-y;
+}
+
+.fx-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fx-btn {
+  /* 44px keeps the target within reach of a thumb — the old gestures had no
+     visible target at all. */
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  background: rgba(102, 221, 255, 0.08);
+  color: #6df;
+  border: 1px solid rgba(102, 221, 255, 0.35);
+  border-radius: 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85em;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.fx-btn:hover {
+  background: rgba(102, 221, 255, 0.2);
+}
+
+.fx-btn:focus-visible {
+  outline: 2px solid #6df;
+  outline-offset: 2px;
+}
+
+.fx-btn:active {
+  background: rgba(102, 221, 255, 0.3);
+}
+
+/* "Read as text": swap the canvas out for the real, selectable text. */
+.fx-readable canvas,
+.fx-readable [data-fx-hint] {
+  display: none;
+}
+
+/* These must out-specify the `.fx-active` rules that hide the source, which
+   carry two ancestor classes — hence the doubled class here. */
+.fx-active.fx-readable .poem-source,
+.fx-active.fx-readable .quote-source,
+.fx-active.fx-readable .matrix-source,
+.fx-active.fx-readable .wave-source,
+.fx-active.fx-readable .constellation-source,
+.fx-active.fx-readable .flame-source,
+.fx-active.fx-readable .typewriter-source,
+.fx-fallback .poem-source,
+.fx-fallback .quote-source,
+.fx-fallback .matrix-source,
+.fx-fallback .wave-source,
+.fx-fallback .constellation-source,
+.fx-fallback .flame-source,
+.fx-fallback .typewriter-source {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: pre-wrap;
+  text-align: left;
+  line-height: 1.7;
+}
+
+/* The effects animate indefinitely by design; under reduced motion they start
+   paused and settled, and the hint text is redundant noise. */
+@media (prefers-reduced-motion: reduce) {
+  [data-fx-hint] {
+    display: none;
+  }
+}

@@ -1,78 +1,42 @@
 /* poetry-life.js — Conway's Game of Life rendered with poem characters.
-   Uses @chenglou/pretext to lay out the poem text on a character grid,
-   then evolves the grid through Game of Life generations.
-   Characters scatter, form new patterns, then morph back into the
-   readable poem — an endless cycle of decay and rebirth. */
-(async function () {
-  /* ── Early exit if no poetry element on this page ──────────── */
+   The poem is laid out on a character grid, evolved through Game of Life
+   generations, then morphed back into the readable poem.
+
+   The simulation only advances a few times a second, so the render loop is
+   driven by FX.loop's dirty flag rather than repainting every frame. */
+(function () {
   var wrap = document.querySelector('.poetry-life[data-poem]');
   if (!wrap) return;
 
-  /* ── Device detection ──────────────────────────────────────── */
-  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-  var GLOW = isMobile ? 0 : 1;
+  if (!window.FX) { console.warn('[poetry-life] fx-runtime missing'); return; }
 
-  /* ── Load pretext ──────────────────────────────────────────── */
-  var pt;
-  try {
-    pt = await import('https://cdn.jsdelivr.net/npm/@chenglou/pretext/+esm');
-  } catch (e) {
-    console.warn('[poetry-life] pretext unavailable:', e);
-    return;
-  }
-
-  /* ── DOM references ────────────────────────────────────────── */
   var source = wrap.querySelector('.poem-source');
-  if (!source) return;
+  var canvas = wrap.querySelector('.life-canvas');
+  if (!source || !canvas) { FX.fallback(wrap, 'missing source or canvas'); return; }
 
   var poemText = source.innerText.trim();
-  if (!poemText) return;
+  if (!poemText) { FX.fallback(wrap, 'no text'); return; }
 
-  var canvas = wrap.querySelector('.life-canvas');
-  if (!canvas) { canvas = document.createElement('canvas'); wrap.appendChild(canvas); }
   var ctx = canvas.getContext('2d');
+  if (!ctx) { FX.fallback(wrap, 'no 2d context'); return; }
 
   /* ── Font & metrics ────────────────────────────────────────── */
-  var fontSize = 14;
-  var font = fontSize + 'px "Courier New", Courier, monospace';
-  var lh = Math.round(fontSize * 1.8);
+  var GLOW     = !FX.isSmall;
+  var fontSize = FX.fontSize(14);
+  var font     = fontSize + 'px "Courier New", Courier, monospace';
+  var lh       = Math.round(fontSize * 1.8);
+  var cw       = Math.ceil(FX.charWidth(ctx, font));
 
-  ctx.font = font;
-  var cw = Math.ceil(ctx.measureText('M').width);
+  /* ── Grid ──────────────────────────────────────────────────── */
+  var cols, rows, textRows, startRow, grid, original;
+  var gridPath;   // grid lines as one Path2D — one stroke call instead of ~70
 
-  /* ── Grid dimensions ───────────────────────────────────────── */
-  var W = wrap.clientWidth || 760;
-  var cols = Math.floor(W / cw);
-  if (cols < 10) cols = 10;
-
-  var prepared = pt.prepareWithSegments(poemText, font, { whiteSpace: 'pre-wrap' });
-  var layout = pt.layoutWithLines(prepared, cols * cw, lh);
-  var textRows = layout.lineCount;
-  var minRows = Math.max(22, textRows + 8);
-  var rows = minRows;
-
-  /* ── Size canvas (retina-aware) ────────────────────────────── */
-  var dpr = window.devicePixelRatio || 1;
-  function sizeCanvas() {
-    canvas.width  = Math.round(cols * cw * dpr);
-    canvas.height = Math.round(rows * lh * dpr);
-    canvas.style.width  = (cols * cw) + 'px';
-    canvas.style.height = (rows * lh) + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  sizeCanvas();
-
-  /* ── Character pool from the poem ──────────────────────────── */
   var charPool = poemText.replace(/\s/g, '').split('');
   function rnd() { return charPool[Math.floor(Math.random() * charPool.length)]; }
 
-  /* ── Grid helpers ──────────────────────────────────────────── */
   function emptyGrid() {
     var g = new Array(rows);
-    for (var r = 0; r < rows; r++) {
-      g[r] = new Array(cols);
-      for (var c = 0; c < cols; c++) g[r][c] = null;
-    }
+    for (var r = 0; r < rows; r++) g[r] = new Array(cols).fill(null);
     return g;
   }
 
@@ -82,202 +46,193 @@
     return n;
   }
 
-  /* ── Place poem on the grid using pretext line layout ──────── */
-  var grid = emptyGrid();
-  var startRow = Math.floor((rows - textRows) / 2);
+  function build() {
+    var W = wrap.clientWidth || 760;
+    cols = Math.max(10, Math.floor(W / cw));
 
-  for (var i = 0; i < layout.lines.length; i++) {
-    var lt = layout.lines[i].text;
-    for (var j = 0; j < lt.length && j < cols; j++) {
-      if (lt[j] !== ' ') {
-        grid[startRow + i][j] = lt[j];
+    var lines = FX.wrapMono(poemText, cols);
+    textRows  = lines.length;
+    rows      = Math.max(22, textRows + 8);
+
+    FX.sizeCanvas(canvas, ctx, cols * cw, rows * lh);
+
+    grid = emptyGrid();
+    startRow = Math.floor((rows - textRows) / 2);
+    for (var i = 0; i < lines.length; i++) {
+      var lt = lines[i];
+      for (var j = 0; j < lt.length && j < cols; j++) {
+        if (lt[j] !== ' ') grid[startRow + i][j] = lt[j];
       }
     }
+    original = cloneGrid(grid);
+
+    /* Rebuild the static grid-line geometry once per layout. */
+    gridPath = new Path2D();
+    for (var r = 0; r <= rows; r++) { gridPath.moveTo(0, r * lh); gridPath.lineTo(cols * cw, r * lh); }
+    for (var c = 0; c <= cols; c++) { gridPath.moveTo(c * cw, 0); gridPath.lineTo(c * cw, rows * lh); }
   }
 
-  var original = cloneGrid(grid);
+  build();
 
-  /* ── Count live neighbours ─────────────────────────────────── */
+  /* ── Life rules ────────────────────────────────────────────── */
   function nb(g, r, c) {
     var n = 0;
-    for (var dr = -1; dr <= 1; dr++) {
-      for (var dc = -1; dc <= 1; dc++) {
-        if (!dr && !dc) continue;
-        var nr = r + dr, nc = c + dc;
-        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && g[nr][nc]) n++;
+    var r0 = r > 0 ? r - 1 : 0, r1 = r < rows - 1 ? r + 1 : rows - 1;
+    var c0 = c > 0 ? c - 1 : 0, c1 = c < cols - 1 ? c + 1 : cols - 1;
+    for (var nr = r0; nr <= r1; nr++) {
+      var row = g[nr];
+      for (var nc = c0; nc <= c1; nc++) {
+        if (nr === r && nc === c) continue;
+        if (row[nc]) n++;
       }
     }
     return n;
   }
 
-  /* ── One Game-of-Life generation ───────────────────────────── */
-  function step() {
+  function stepLife() {
     var next = emptyGrid();
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
         var n = nb(grid, r, c);
-        if (grid[r][c]) {
-          next[r][c] = (n === 2 || n === 3) ? grid[r][c] : null;
-        } else {
-          next[r][c] = (n === 3) ? rnd() : null;
-        }
+        next[r][c] = grid[r][c] ? ((n === 2 || n === 3) ? grid[r][c] : null)
+                                : ((n === 3) ? rnd() : null);
       }
     }
     grid = next;
   }
 
-  /* ── Morph grid toward original (gradual reassembly) ───────── */
   function morph(progress) {
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
-        if (Math.random() < progress) {
-          grid[r][c] = original[r][c];
-        }
+        if (Math.random() < progress) grid[r][c] = original[r][c];
       }
     }
   }
 
   /* ── Render ────────────────────────────────────────────────── */
+  var yPad = Math.round((lh - fontSize) / 2);
+
   function draw() {
     var cW = cols * cw;
-    var cH = rows * lh;
-    ctx.clearRect(0, 0, cW, cH);
+    var band = FX.band(canvas);
+    ctx.clearRect(0, band.y0, cW, band.y1 - band.y0);
 
-    /* Faint grid lines */
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, band.y0, cW, band.y1 - band.y0);
+    ctx.clip();
+
     ctx.strokeStyle = 'rgba(102,221,255,0.025)';
     ctx.lineWidth = 0.5;
-    for (var r = 0; r <= rows; r++) {
-      ctx.beginPath(); ctx.moveTo(0, r * lh); ctx.lineTo(cW, r * lh); ctx.stroke();
-    }
-    for (var c = 0; c <= cols; c++) {
-      ctx.beginPath(); ctx.moveTo(c * cw, 0); ctx.lineTo(c * cw, cH); ctx.stroke();
-    }
+    ctx.stroke(gridPath);
+    ctx.restore();
 
-    /* Characters with glow */
     ctx.font = font;
     ctx.textBaseline = 'top';
-    if (GLOW) { ctx.shadowColor = '#6df'; ctx.shadowBlur = 6; }
     ctx.fillStyle = '#6df';
+    /* Set once for the whole pass rather than per glyph. */
+    if (GLOW) { ctx.shadowColor = '#6df'; ctx.shadowBlur = 6; }
 
-    var yPad = Math.round((lh - fontSize) / 2);
-    for (var r = 0; r < rows; r++) {
+    /* Only the rows inside the visible slice are painted. */
+    var rFrom = Math.max(0, Math.floor(band.y0 / lh));
+    var rTo   = Math.min(rows - 1, Math.ceil(band.y1 / lh));
+    for (var r = rFrom; r <= rTo; r++) {
+      var row = grid[r];
+      var y = r * lh + yPad;
       for (var c = 0; c < cols; c++) {
-        if (grid[r][c]) {
-          ctx.fillText(grid[r][c], c * cw, r * lh + yPad);
-        }
+        if (row[c]) ctx.fillText(row[c], c * cw, y);
       }
     }
     if (GLOW) ctx.shadowBlur = 0;
   }
 
-  /* ── Animation state machine ───────────────────────────────── */
-  var PHASE_READ    = 0;   // show readable poem
-  var PHASE_EVOLVE  = 1;   // Game of Life running
-  var PHASE_MORPH   = 2;   // reassembling back to poem
+  /* ── State machine ─────────────────────────────────────────── */
+  var PHASE_READ = 0, PHASE_EVOLVE = 1, PHASE_MORPH = 2;
 
   var phase       = PHASE_READ;
   var gen         = 0;
   var maxGen      = 28;
   var morphFrame  = 0;
   var morphFrames = 18;
-  var lastStep    = 0;
-  var stepMs      = 350;   // ms between generations
-  var readMs      = 3500;  // ms to hold readable text
-  var paused      = false;
+  var elapsed     = 0;
+  var stepMs      = 350;
+  var readMs      = 3500;
 
-  function animate(ts) {
-    if (!lastStep) lastStep = ts;
-    var dt = ts - lastStep;
+  /* Returns false when the grid is unchanged, so FX.loop skips the repaint —
+     during the 3.5s read phase that is every single frame. */
+  function step(dt) {
+    elapsed += dt;
 
-    if (!paused) {
-      if (phase === PHASE_READ) {
-        if (dt >= readMs) {
-          phase = PHASE_EVOLVE;
-          gen = 0;
-          lastStep = ts;
-        }
-      } else if (phase === PHASE_EVOLVE) {
-        if (dt >= stepMs) {
-          step();
-          gen++;
-          lastStep = ts;
-          if (gen >= maxGen) {
-            phase = PHASE_MORPH;
-            morphFrame = 0;
-            lastStep = ts;
-          }
-        }
-      } else if (phase === PHASE_MORPH) {
-        if (dt >= 60) {             // morph at ~16 fps
-          morphFrame++;
-          var p = morphFrame / morphFrames;
-          morph(p * p);             // ease-in curve
-          lastStep = ts;
-          if (morphFrame >= morphFrames) {
-            grid = cloneGrid(original);   // snap to exact original
-            phase = PHASE_READ;
-            lastStep = ts;
-          }
-        }
-      }
+    if (phase === PHASE_READ) {
+      if (elapsed < readMs) return false;
+      phase = PHASE_EVOLVE; gen = 0; elapsed = 0;
+      return false;
     }
 
-    draw();
-    requestAnimationFrame(animate);
+    if (phase === PHASE_EVOLVE) {
+      if (elapsed < stepMs) return false;
+      elapsed = 0;
+      stepLife();
+      if (++gen >= maxGen) { phase = PHASE_MORPH; morphFrame = 0; }
+      return true;
+    }
+
+    if (phase === PHASE_MORPH) {
+      if (elapsed < 60) return false;
+      elapsed = 0;
+      morphFrame++;
+      var p = morphFrame / morphFrames;
+      morph(p * p);
+      if (morphFrame >= morphFrames) {
+        grid = cloneGrid(original);
+        phase = PHASE_READ;
+      }
+      return true;
+    }
+    return false;
   }
 
-  /* ── First paint then start loop ───────────────────────────── */
-  draw();
-  requestAnimationFrame(animate);
-
-  /* ── Interactions ──────────────────────────────────────────── */
-
-  /* Click → instant reset to readable */
-  canvas.addEventListener('click', function () {
+  function reset() {
     grid = cloneGrid(original);
     phase = PHASE_READ;
-    lastStep = 0;
-    gen = 0;
-    morphFrame = 0;
-    draw();
+    elapsed = 0; gen = 0; morphFrame = 0;
+  }
+
+  draw();
+  var loop = FX.loop(canvas, { step: step, draw: draw });
+
+  /* ── Interaction ───────────────────────────────────────────── */
+  /* Was: click to reset, hover to pause — the pause was unreachable on touch.
+     Now a tap resets, a long press holds the current generation, and the
+     control bar gives an explicit pause for everyone. */
+  var heldByPress = false;
+
+  FX.pointer(canvas, {
+    onTap: function () { reset(); loop.wake(); },
+    onLongPress: function () {
+      heldByPress = loop.playing;
+      if (heldByPress) loop.pause();
+    },
+    onHover: function () {},
+    onHoverEnd: function () {
+      if (heldByPress) { heldByPress = false; loop.play(); }
+    }
   });
 
-  /* Hover → pause / resume */
-  canvas.addEventListener('mouseenter', function () { paused = true; });
-  canvas.addEventListener('mouseleave', function () {
-    paused = false;
-    lastStep = 0;     // reset timer so next phase doesn't jump
+  FX.controls(wrap, {
+    loop: loop,
+    onReplay: function () { reset(); loop.wake(); },
+    onRead: function () {},
+    hint: {
+      hover: 'click to reset · press and hold to freeze',
+      touch: 'tap to reset · hold to freeze'
+    }
   });
 
-  /* Resize → recalculate (simple reload approach for now) */
-  var resizeTimer;
-  window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
-      W = wrap.clientWidth || 760;
-      var newCols = Math.floor(W / cw);
-      if (newCols !== cols && newCols >= 10) {
-        cols = newCols;
-        prepared = pt.prepareWithSegments(poemText, font, { whiteSpace: 'pre-wrap' });
-        layout = pt.layoutWithLines(prepared, cols * cw, lh);
-        textRows = layout.lineCount;
-        rows = Math.max(22, textRows + 8);
-        sizeCanvas();
-
-        grid = emptyGrid();
-        startRow = Math.floor((rows - textRows) / 2);
-        for (var i = 0; i < layout.lines.length; i++) {
-          var lt = layout.lines[i].text;
-          for (var j = 0; j < lt.length && j < cols; j++) {
-            if (lt[j] !== ' ') grid[startRow + i][j] = lt[j];
-          }
-        }
-        original = cloneGrid(grid);
-        phase = PHASE_READ;
-        lastStep = 0;
-        gen = 0;
-        draw();
-      }
-    }, 300);
+  FX.onResize(function () {
+    build();
+    phase = PHASE_READ;
+    elapsed = 0; gen = 0;
+    loop.wake();
   });
 })();

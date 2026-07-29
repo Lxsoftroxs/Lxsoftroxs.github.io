@@ -1,34 +1,24 @@
 /* quotes-gravity.js — N-body gravity simulation where every letter is a
-   particle.  Uses @chenglou/pretext to compute the initial character grid,
-   then runs pairwise gravitational physics with spatial-hash acceleration.
+   particle, with spatial-hash acceleration for the pairwise forces.
    Characters scatter, orbit, cluster, then slowly reform into readable
    quotes — an endless gravitational ballet of words. */
-(async function () {
+(function () {
 
   /* ── Early exit ────────────────────────────────────────────── */
   var wrap = document.querySelector('.quotes-gravity[data-quotes]');
   if (!wrap) return;
 
-  /* ── Device detection ──────────────────────────────────────── */
-  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-  var GLOW = isMobile ? 0 : 1;
+  if (!window.FX) { console.warn('[quotes-gravity] fx-runtime missing'); return; }
 
-  /* ── Load pretext ──────────────────────────────────────────── */
-  var pt;
-  try {
-    pt = await import('https://cdn.jsdelivr.net/npm/@chenglou/pretext/+esm');
-  } catch (e) {
-    console.warn('[quotes-gravity] pretext unavailable:', e);
-    return;
-  }
+  var GLOW = !FX.isSmall;
 
   /* ── DOM ────────────────────────────────────────────────────── */
   var source = wrap.querySelector('.quote-source');
-  if (!source) return;
-
   var canvas = wrap.querySelector('.gravity-canvas');
-  if (!canvas) return;
+  if (!source || !canvas) { FX.fallback(wrap, 'missing source or canvas'); return; }
+
   var ctx = canvas.getContext('2d');
+  if (!ctx) { FX.fallback(wrap, 'no 2d context'); return; }
 
   /* ── Parse quotes into separate groups ─────────────────────── */
   var quoteEls = source.querySelectorAll('p');
@@ -37,7 +27,7 @@
     var t = quoteEls[qi].innerText.trim();
     if (t) quotes.push(t);
   }
-  if (!quotes.length) return;
+  if (!quotes.length) { FX.fallback(wrap, 'no quotes'); return; }
 
   /* ── Neon palette — one colour per quote ───────────────────── */
   var COLORS = [
@@ -50,7 +40,7 @@
      ══════════════════════════════════════════════════════════════ */
 
   /* -- Font --------------------------------------------------- */
-  var FONT_SIZE    = 13;
+  var FONT_SIZE    = FX.fontSize(13);
   var FONT_FAMILY  = '"Courier New", Courier, monospace';
   var LINE_HEIGHT  = 1.7;                          // multiplier of FONT_SIZE
   var TEXT_PADDING  = 10;                           // px padding inside canvas
@@ -94,41 +84,32 @@
   /* ── Font metrics ──────────────────────────────────────────── */
   var font = FONT_SIZE + 'px ' + FONT_FAMILY;
   var lh   = Math.round(FONT_SIZE * LINE_HEIGHT);
-  ctx.font = font;
-  var cw   = ctx.measureText('M').width;
+  var cw   = FX.charWidth(ctx, font);
 
   /* ── Canvas sizing ─────────────────────────────────────────── */
-  var dpr = window.devicePixelRatio || 1;
   var W, H;
 
   function sizeCanvas(textH) {
     W = wrap.clientWidth || 760;
     H = textH ? Math.max(500, textH + 40) : Math.max(500, window.innerHeight * 0.7);
-    canvas.width  = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    canvas.style.width  = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    FX.sizeCanvas(canvas, ctx, W, H);
   }
 
   sizeCanvas();
 
-  /* ── Use pretext to layout all quotes and map characters ───── */
+  /* ── Lay out all quotes and map characters ─────────────────── */
   var N = 0;
-  var maxW = W - TEXT_PADDING * 2;
 
   function layoutQuotes() {
     var data = [];
     var yOff = TEXT_PADDING * 2;
-    maxW = W - TEXT_PADDING * 2;
+    var cols = Math.max(1, Math.floor((W - TEXT_PADDING * 2) / cw));
 
     for (var qi = 0; qi < quotes.length; qi++) {
-      var text = quotes[qi];
-      var prepared = pt.prepareWithSegments(text, font, { whiteSpace: 'pre-wrap' });
-      var layout   = pt.layoutWithLines(prepared, maxW, lh);
+      var lines = FX.wrapMono(quotes[qi], cols);
 
-      for (var li = 0; li < layout.lines.length; li++) {
-        var lineText = layout.lines[li].text;
+      for (var li = 0; li < lines.length; li++) {
+        var lineText = lines[li];
         var x = TEXT_PADDING;
 
         for (var ci = 0; ci < lineText.length; ci++) {
@@ -156,7 +137,7 @@
   sizeCanvas(result.totalH);
 
   N = charData.length;
-  if (!N) return;
+  if (!N) { FX.fallback(wrap, 'nothing to lay out'); return; }
 
   /* ── Particle arrays (typed for speed) ─────────────────────── */
   var px     = new Float32Array(N);   // position x
@@ -318,31 +299,28 @@
 
   /* ── Render ────────────────────────────────────────────────── */
   function draw() {
-    ctx.clearRect(0, 0, W, H);
+    var band = FX.band(canvas);
+    ctx.clearRect(0, band.y0, W, band.y1 - band.y0);
     ctx.font = font;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
 
-    // Batch characters by colour to minimise state changes
-    var colorBuckets = {};
+    /* Characters of one quote are contiguous in layout order, so walking in
+       order and only touching fill/shadow state on a change gives one state
+       change per quote while keeping the draws spatially ordered. The old
+       version built a fresh bucket object and N array entries every frame
+       and drew them out of order. */
+    if (GLOW) ctx.shadowBlur = 3;
+    var last = -1;
     for (var i = 0; i < N; i++) {
-      var color = COLORS[qi_arr[i] % COLORS.length];
-      if (!colorBuckets[color]) colorBuckets[color] = [];
-      colorBuckets[color].push(i);
-    }
-
-    var colorKeys = Object.keys(colorBuckets);
-    for (var ci = 0; ci < colorKeys.length; ci++) {
-      var c       = colorKeys[ci];
-      var indices = colorBuckets[c];
-
-      ctx.fillStyle = c;
-      if (GLOW) { ctx.shadowColor = c; ctx.shadowBlur = 3; }
-
-      for (var k = 0; k < indices.length; k++) {
-        var idx = indices[k];
-        ctx.fillText(ch[idx], px[idx], py[idx]);
+      if (py[i] < band.y0 || py[i] > band.y1) continue;
+      var ci = qi_arr[i] % COLORS.length;
+      if (ci !== last) {
+        last = ci;
+        ctx.fillStyle = COLORS[ci];
+        if (GLOW) ctx.shadowColor = COLORS[ci];
       }
+      ctx.fillText(ch[i], px[i], py[i]);
     }
 
     if (GLOW) ctx.shadowBlur = 0;
@@ -384,47 +362,32 @@
     }
   }
 
-  /* ── Mouse / touch state ───────────────────────────────────── */
+  /* ── Pointer state ─────────────────────────────────────────── */
   var mouseX    = -999;
   var mouseY    = -999;
   var mouseDown = false;
 
-  canvas.addEventListener('mousemove', function (e) {
-    var r = canvas.getBoundingClientRect();
-    mouseX = e.clientX - r.left;
-    mouseY = e.clientY - r.top;
+  /* ── First paint (readable) then start ─────────────────────── */
+  homeCur  = HOME_MAX;
+  G        = 0;
+  clusterK = 0;
+  draw();
+
+  var loop = FX.loop(canvas, {
+    step: function (dt) {
+      updatePhase(dt);
+      physics();
+      return true;
+    },
+    draw: draw
   });
-  canvas.addEventListener('mouseleave', function () { mouseX = -999; mouseDown = false; });
-  canvas.addEventListener('mousedown',  function () { mouseDown = true; });
-  canvas.addEventListener('mouseup',    function () { mouseDown = false; });
 
-  canvas.addEventListener('touchstart', function (e) {
-    if (e.touches[0]) {
-      var r = canvas.getBoundingClientRect();
-      mouseX = e.touches[0].clientX - r.left;
-      mouseY = e.touches[0].clientY - r.top;
-      mouseDown = true;
-    }
-  }, { passive: true });
-  canvas.addEventListener('touchmove', function (e) {
-    if (e.touches[0]) {
-      var r = canvas.getBoundingClientRect();
-      mouseX = e.touches[0].clientX - r.left;
-      mouseY = e.touches[0].clientY - r.top;
-    }
-  }, { passive: true });
-  canvas.addEventListener('touchend', function () { mouseDown = false; }, { passive: true });
-
-  /* ── Click → scatter burst ─────────────────────────────────── */
-  var lastClickTime = 0;
-
-  canvas.addEventListener('click', function (e) {
-    var now = e.timeStamp || Date.now();
-
-    // FIX: Suppress click events that are part of a double-click (< 350ms gap)
-    if (now - lastClickTime < 350) return;
-    lastClickTime = now;
-
+  /* ── Interaction ───────────────────────────────────────────── */
+  /* Attraction was mousedown-only, so on a phone it was unreachable — the
+     "drag to attract" hint described a gesture that did nothing. It is now a
+     real drag, and horizontal drags are claimed while vertical ones stay with
+     the page scroller. */
+  function scatter() {
     for (var i = 0; i < N; i++) {
       var angle = Math.random() * Math.PI * 2;
       var mag   = SCATTER_VEL * (1 + Math.random());
@@ -433,76 +396,69 @@
     }
     phase     = PHASE_DRIFT;
     phaseTime = 0;
-  });
-
-  /* ── Double-click → reform immediately ─────────────────────── */
-  canvas.addEventListener('dblclick', function () {
-    lastClickTime = 0;   // reset so next single-click works
-    phase     = PHASE_REFORM;
-    phaseTime = 0;
-  });
-
-  /* ── Animation loop ────────────────────────────────────────── */
-  var lastT = 0;
-
-  function animate(ts) {
-    var dt = lastT ? (ts - lastT) : 16;
-    lastT = ts;
-    if (dt > 50) dt = 50;   // cap to prevent spiral on tab-switch
-
-    updatePhase(dt);
-    physics();
-    draw();
-
-    requestAnimationFrame(animate);
   }
 
-  /* ── First paint (readable) then start ─────────────────────── */
-  homeCur  = HOME_MAX;
-  G        = 0;
-  clusterK = 0;
-  draw();
-  requestAnimationFrame(animate);
+  function reform() {
+    phase     = PHASE_REFORM;
+    phaseTime = 0;
+  }
+
+  FX.pointer(canvas, {
+    onTap:       function () { scatter(); loop.play(); loop.wake(); },
+    onDoubleTap: function () { reform();  loop.play(); loop.wake(); },
+    onHover:     function (x, y) { mouseX = x; mouseY = y; },
+    onDragStart: function (x, y) { mouseX = x; mouseY = y; mouseDown = true; loop.play(); },
+    onDragMove:  function (x, y) { mouseX = x; mouseY = y; },
+    onDragEnd:   function () { mouseDown = false; mouseX = -999; mouseY = -999; },
+    onHoverEnd:  function () { mouseDown = false; mouseX = -999; mouseY = -999; }
+  });
+
+  FX.controls(wrap, {
+    loop: loop,
+    onReplay: function () { reform(); loop.wake(); },
+    onRead: function () {},
+    hint: {
+      hover: 'drag to attract · click to scatter · double-click to reform',
+      touch: 'drag sideways to attract · tap to scatter · double-tap to reform'
+    }
+  });
 
   /* ── Resize ────────────────────────────────────────────────── */
-  var resizeTimer;
-  window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
-      W = wrap.clientWidth || 760;
-      var r = layoutQuotes();
-      sizeCanvas(r.totalH);
+  FX.onResize(function () {
+    W = wrap.clientWidth || 760;
+    var r = layoutQuotes();
+    sizeCanvas(r.totalH);
 
-      // Reallocate acceleration buffers for potentially new N
-      if (r.data.length !== N) {
-        N      = r.data.length;
-        px     = new Float32Array(N);
-        py     = new Float32Array(N);
-        vx     = new Float32Array(N);
-        vy     = new Float32Array(N);
-        hx     = new Float32Array(N);
-        hy     = new Float32Array(N);
-        ch     = new Array(N);
-        qi_arr = new Uint8Array(N);
-        ax     = new Float32Array(N);
-        ay     = new Float32Array(N);
+    // Reallocate acceleration buffers for potentially new N
+    if (r.data.length !== N) {
+      N      = r.data.length;
+      px     = new Float32Array(N);
+      py     = new Float32Array(N);
+      vx     = new Float32Array(N);
+      vy     = new Float32Array(N);
+      hx     = new Float32Array(N);
+      hy     = new Float32Array(N);
+      ch     = new Array(N);
+      qi_arr = new Uint8Array(N);
+      ax     = new Float32Array(N);
+      ay     = new Float32Array(N);
 
-        for (var i = 0; i < N; i++) {
-          var d = r.data[i];
-          px[i] = hx[i] = d.hx;
-          py[i] = hy[i] = d.hy;
-          vx[i] = vy[i] = 0;
-          ch[i] = d.ch;
-          qi_arr[i] = d.qIdx;
-        }
-      } else {
-        // Same count — just update home positions
-        for (var i = 0; i < N; i++) {
-          hx[i] = r.data[i].hx;
-          hy[i] = r.data[i].hy;
-        }
+      for (var i = 0; i < N; i++) {
+        var d = r.data[i];
+        px[i] = hx[i] = d.hx;
+        py[i] = hy[i] = d.hy;
+        vx[i] = vy[i] = 0;
+        ch[i] = d.ch;
+        qi_arr[i] = d.qIdx;
       }
-    }, 300);
+    } else {
+      // Same count — just update home positions
+      for (var i = 0; i < N; i++) {
+        hx[i] = r.data[i].hx;
+        hy[i] = r.data[i].hy;
+      }
+    }
+    loop.wake();
   });
 
 })();

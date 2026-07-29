@@ -1,95 +1,71 @@
-/* wave-ripple.js — Characters undulate with sine waves and
-   respond to click-generated ripples that radiate outward.
-   Text remains loosely readable throughout — a gentle, ambient effect. */
-(async function () {
-
+/* wave-ripple.js — Characters undulate with sine waves and respond to
+   tap-generated ripples that radiate outward. Text stays readable
+   throughout — a gentle, ambient effect. */
+(function () {
   var wrap = document.querySelector('.wave-ripple[data-wave]');
   if (!wrap) return;
 
-  /* ── Device detection ──────────────────────────────────────── */
-  var isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-  var GLOW = isMobile ? 0 : 1;
-
-  var pt;
-  try {
-    pt = await import('https://cdn.jsdelivr.net/npm/@chenglou/pretext/+esm');
-  } catch (e) { console.warn('[wave-ripple] pretext unavailable:', e); return; }
+  if (!window.FX) { console.warn('[wave-ripple] fx-runtime missing'); return; }
 
   var source = wrap.querySelector('.wave-source');
-  if (!source) return;
   var canvas = wrap.querySelector('.wave-canvas');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
+  if (!source || !canvas) { FX.fallback(wrap, 'missing source or canvas'); return; }
 
   var allText = source.innerText.trim();
-  if (!allText) return;
+  if (!allText) { FX.fallback(wrap, 'no text'); return; }
+
+  var ctx = canvas.getContext('2d');
+  if (!ctx) { FX.fallback(wrap, 'no 2d context'); return; }
 
   /* ══════════════════════════════════════════════════════════════
      CONFIGURATION
      ══════════════════════════════════════════════════════════════ */
-  var FONT_SIZE   = 14;
+  var GLOW        = !FX.isSmall;
+  var FONT_SIZE   = FX.fontSize(14);
   var FONT_FAMILY = '"Courier New", Courier, monospace';
   var LINE_HEIGHT = 1.7;
   var PADDING     = 10;
 
-  /* Ambient wave */
-  var WAVE_AMP_X    = 3;       // horizontal wave amplitude (px)
-  var WAVE_AMP_Y    = 4;       // vertical wave amplitude (px)
-  var WAVE_FREQ_X   = 0.015;   // horizontal spatial frequency
-  var WAVE_FREQ_Y   = 0.02;    // vertical spatial frequency
-  var WAVE_SPEED    = 0.0015;  // wave animation speed
+  var WAVE_AMP_X  = 3;
+  var WAVE_AMP_Y  = 4;
+  var WAVE_FREQ_X = 0.015;
+  var WAVE_FREQ_Y = 0.02;
+  var WAVE_SPEED  = 0.0015;
 
-  /* Click ripples */
-  var RIPPLE_AMP    = 18;      // max ripple displacement (px)
-  var RIPPLE_SPEED  = 180;     // ripple expansion speed (px/s)
-  var RIPPLE_WIDTH  = 80;      // ripple ring width (px)
-  var RIPPLE_DECAY  = 0.97;    // amplitude decay per frame
-  var MAX_RIPPLES   = 8;
+  var RIPPLE_AMP   = 18;
+  var RIPPLE_SPEED = 180;
+  var RIPPLE_WIDTH = 80;
+  var RIPPLE_DECAY = 0.97;
+  var MAX_RIPPLES  = 8;
 
-  /* Mouse hover disturbance */
-  var HOVER_RADIUS  = 80;
-  var HOVER_PUSH    = 12;      // push strength (px)
+  var HOVER_RADIUS = 80;
+  var HOVER_PUSH   = 12;
 
-  /* Colours — ocean-inspired gradient */
   var COLORS = ['#4df', '#6ef', '#9ff', '#6df', '#3cf', '#7af'];
 
   /* ══════════════════════════════════════════════════════════════ */
 
   var font = FONT_SIZE + 'px ' + FONT_FAMILY;
   var lh   = Math.round(FONT_SIZE * LINE_HEIGHT);
-  ctx.font = font;
-  var cw   = ctx.measureText('M').width;
+  var cw   = FX.charWidth(ctx, font);
 
-  var dpr = window.devicePixelRatio || 1;
-  var W, H;
-
-  function sizeCanvas(textH) {
-    W = wrap.clientWidth || 760;
-    H = textH ? Math.max(400, textH + 60) : Math.max(400, window.innerHeight * 0.65);
-    canvas.width  = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    canvas.style.width  = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  sizeCanvas();
-
-  /* ── Layout ────────────────────────────────────────────────── */
-  var N = 0;
+  var W, H, N = 0;
+  var hx, hy, ch, row;
+  /* Per-glyph draw positions, recomputed in step() and consumed by draw(). */
+  var dxArr, dyArr, colorOf;
 
   function layoutText() {
+    W = wrap.clientWidth || 760;
+    var lines = FX.wrapMono(allText, Math.max(1, Math.floor((W - PADDING * 2) / cw)));
     var data = [];
     var yOff = PADDING * 2;
-    var maxW = W - PADDING * 2;
-    var prepared = pt.prepareWithSegments(allText, font, { whiteSpace: 'pre-wrap' });
-    var layout   = pt.layoutWithLines(prepared, maxW, lh);
-    for (var li = 0; li < layout.lines.length; li++) {
-      var lineText = layout.lines[li].text;
+    for (var li = 0; li < lines.length; li++) {
+      var lineText = lines[li];
       var x = PADDING;
       for (var ci = 0; ci < lineText.length; ci++) {
-        var ch = lineText[ci];
-        if (ch !== ' ' && ch !== '\t') {
-          data.push({ ch: ch, hx: x + cw * 0.5, hy: yOff + lh * 0.5, row: li });
+        var c = lineText[ci];
+        if (c !== ' ' && c !== '\t') {
+          data.push({ ch: c, hx: x + cw * 0.5, hy: yOff + lh * 0.5, row: li });
         }
         x += cw;
       }
@@ -98,77 +74,44 @@
     return { data: data, totalH: yOff };
   }
 
-  var result   = layoutText();
-  var charData = result.data;
-  sizeCanvas(result.totalH);
-  N = charData.length;
-  if (!N) return;
+  function build() {
+    var r = layoutText();
+    H = Math.max(400, r.totalH + 60);
+    FX.sizeCanvas(canvas, ctx, W, H);
 
-  var hx  = new Float32Array(N);
-  var hy  = new Float32Array(N);
-  var ch  = new Array(N);
-  var row = new Uint16Array(N);
+    N = r.data.length;
+    hx = new Float32Array(N); hy = new Float32Array(N);
+    dxArr = new Float32Array(N); dyArr = new Float32Array(N);
+    colorOf = new Uint8Array(N);
+    ch = new Array(N);
+    row = new Uint16Array(N);
 
-  for (var i = 0; i < N; i++) {
-    hx[i]  = charData[i].hx;
-    hy[i]  = charData[i].hy;
-    ch[i]  = charData[i].ch;
-    row[i] = charData[i].row;
+    for (var i = 0; i < N; i++) {
+      hx[i]  = r.data[i].hx;
+      hy[i]  = r.data[i].hy;
+      ch[i]  = r.data[i].ch;
+      row[i] = r.data[i].row;
+    }
+
+    return N > 0;
   }
-  charData = null;
 
-  /* ── Ripple state ──────────────────────────────────────────── */
-  var ripples = []; // { x, y, radius, amp }
+  if (!build()) { FX.fallback(wrap, 'nothing to lay out'); return; }
 
-  /* ── Mouse state ───────────────────────────────────────────── */
-  var mouseX = -999, mouseY = -999;
-
-  canvas.addEventListener('mousemove', function (e) {
-    var r = canvas.getBoundingClientRect();
-    mouseX = e.clientX - r.left;
-    mouseY = e.clientY - r.top;
-  });
-  canvas.addEventListener('mouseleave', function () { mouseX = -999; });
-
-  canvas.addEventListener('touchmove', function (e) {
-    if (e.touches[0]) {
-      var r = canvas.getBoundingClientRect();
-      mouseX = e.touches[0].clientX - r.left;
-      mouseY = e.touches[0].clientY - r.top;
-    }
-  }, { passive: true });
-  canvas.addEventListener('touchend', function () { mouseX = -999; }, { passive: true });
-
-  /* Click → spawn ripple */
-  canvas.addEventListener('click', function (e) {
-    var r = canvas.getBoundingClientRect();
-    var rx = e.clientX - r.left;
-    var ry = e.clientY - r.top;
-    if (ripples.length >= MAX_RIPPLES) ripples.shift();
-    ripples.push({ x: rx, y: ry, radius: 0, amp: RIPPLE_AMP });
-  });
-
-  canvas.addEventListener('touchstart', function (e) {
-    if (e.touches[0]) {
-      var r = canvas.getBoundingClientRect();
-      var rx = e.touches[0].clientX - r.left;
-      var ry = e.touches[0].clientY - r.top;
-      if (ripples.length >= MAX_RIPPLES) ripples.shift();
-      ripples.push({ x: rx, y: ry, radius: 0, amp: RIPPLE_AMP });
-    }
-  }, { passive: true });
-
-  /* ── Animation ─────────────────────────────────────────────── */
+  /* ── State ─────────────────────────────────────────────────── */
+  var ripples = [];
+  var pointerX = -999, pointerY = -999;
   var time = 0;
-  var lastT = 0;
 
-  function animate(ts) {
-    var dt = lastT ? (ts - lastT) : 16;
-    lastT = ts;
-    if (dt > 50) dt = 50;
+  function addRipple(x, y) {
+    if (ripples.length >= MAX_RIPPLES) ripples.shift();
+    ripples.push({ x: x, y: y, radius: 0, amp: RIPPLE_AMP });
+  }
+
+  /* ── Update ────────────────────────────────────────────────── */
+  function step(dt) {
     time += dt;
 
-    // Update ripples
     for (var ri = ripples.length - 1; ri >= 0; ri--) {
       var rip = ripples[ri];
       rip.radius += RIPPLE_SPEED * (dt / 1000);
@@ -176,99 +119,124 @@
       if (rip.amp < 0.3) ripples.splice(ri, 1);
     }
 
-    // Draw
-    ctx.clearRect(0, 0, W, H);
+    var nRip = ripples.length;
+    var hovering = pointerX > 0;
+
+    for (var i = 0; i < N; i++) {
+      var x = hx[i], y = hy[i];
+
+      var dx = Math.sin(x * WAVE_FREQ_X + time * WAVE_SPEED) * WAVE_AMP_X;
+      var dy = Math.sin(y * WAVE_FREQ_Y + time * WAVE_SPEED * 0.7 + x * 0.01) * WAVE_AMP_Y
+             + Math.sin(row[i] * 0.5 + time * WAVE_SPEED * 1.3) * WAVE_AMP_Y * 0.5;
+
+      for (var r2 = 0; r2 < nRip; r2++) {
+        var rp = ripples[r2];
+        var rdx = x - rp.x, rdy = y - rp.y;
+        var dist2 = rdx * rdx + rdy * rdy;
+
+        /* Cheap reject before the square root: only glyphs near the ring
+           can be displaced at all. */
+        var lo = rp.radius - RIPPLE_WIDTH;
+        var hi = rp.radius + RIPPLE_WIDTH;
+        if (dist2 > hi * hi || (lo > 0 && dist2 < lo * lo)) continue;
+
+        var dist = Math.sqrt(dist2);
+        if (dist < 0.001) continue;
+        var ringDist = Math.abs(dist - rp.radius);
+        if (ringDist >= RIPPLE_WIDTH) continue;
+
+        /* dx/dist and dy/dist are the unit vector — no atan2/cos/sin needed. */
+        var eff = rp.amp * (1 - ringDist / RIPPLE_WIDTH) / dist;
+        dx += rdx * eff;
+        dy += rdy * eff;
+      }
+
+      if (hovering) {
+        var mdx = x - pointerX, mdy = y - pointerY;
+        var md2 = mdx * mdx + mdy * mdy;
+        if (md2 < HOVER_RADIUS * HOVER_RADIUS && md2 > 1) {
+          var md = Math.sqrt(md2);
+          var pushF = (1 - md / HOVER_RADIUS) * HOVER_PUSH / md;
+          dx += mdx * pushF;
+          dy += mdy * pushF;
+        }
+      }
+
+      dxArr[i] = x + dx;
+      dyArr[i] = y + dy;
+
+      var disp = Math.sqrt(dx * dx + dy * dy);
+      var ci = (disp * 0.25) | 0;
+      colorOf[i] = ci < COLORS.length ? ci : COLORS.length - 1;
+    }
+    return true;
+  }
+
+  /* ── Render ────────────────────────────────────────────────── */
+  function draw() {
+    var band = FX.band(canvas);
+    ctx.clearRect(0, band.y0, W, band.y1 - band.y0);
     ctx.font = font;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
 
+    /* Glyphs are drawn in layout order and the fill/shadow state is only
+       touched when the colour actually changes from the previous glyph.
+       Grouping by colour instead looked cheaper on paper but measured
+       ~3x slower: neighbouring glyphs nearly always share a colour, so the
+       per-glyph assignments were already no-ops, while reordering the draws
+       destroyed the spatial locality the rasteriser depends on. */
+    var last = -1;
+    if (GLOW) ctx.shadowBlur = 3;
     for (var i = 0; i < N; i++) {
-      var x = hx[i];
-      var y = hy[i];
-
-      // Ambient wave displacement
-      var waveX = Math.sin(x * WAVE_FREQ_X + time * WAVE_SPEED) * WAVE_AMP_X;
-      var waveY = Math.sin(y * WAVE_FREQ_Y + time * WAVE_SPEED * 0.7 + x * 0.01) * WAVE_AMP_Y;
-
-      // Row-based phase offset for cascading effect
-      waveY += Math.sin(row[i] * 0.5 + time * WAVE_SPEED * 1.3) * WAVE_AMP_Y * 0.5;
-
-      var dx = waveX;
-      var dy = waveY;
-
-      // Ripple displacement
-      for (var ri = 0; ri < ripples.length; ri++) {
-        var rip = ripples[ri];
-        var rdx = x - rip.x;
-        var rdy = y - rip.y;
-        var dist = Math.sqrt(rdx * rdx + rdy * rdy);
-        var ringDist = Math.abs(dist - rip.radius);
-
-        if (ringDist < RIPPLE_WIDTH) {
-          var rippleEffect = rip.amp * (1 - ringDist / RIPPLE_WIDTH);
-          var angle = Math.atan2(rdy, rdx);
-          dx += Math.cos(angle) * rippleEffect;
-          dy += Math.sin(angle) * rippleEffect;
-        }
+      if (dyArr[i] < band.y0 || dyArr[i] > band.y1) continue;
+      var c = colorOf[i];
+      if (c !== last) {
+        last = c;
+        ctx.fillStyle = COLORS[c];
+        if (GLOW) ctx.shadowColor = COLORS[c];
       }
-
-      // Mouse hover push
-      if (mouseX > 0) {
-        var mdx = x - mouseX;
-        var mdy = y - mouseY;
-        var md  = Math.sqrt(mdx * mdx + mdy * mdy);
-        if (md < HOVER_RADIUS && md > 1) {
-          var pushF = (1 - md / HOVER_RADIUS) * HOVER_PUSH;
-          dx += (mdx / md) * pushF;
-          dy += (mdy / md) * pushF;
-        }
-      }
-
-      // Colour based on displacement magnitude
-      var disp = Math.sqrt(dx * dx + dy * dy);
-      var colorIdx = Math.min(Math.floor(disp / 4), COLORS.length - 1);
-
-      ctx.fillStyle = COLORS[colorIdx];
-      if (GLOW) { ctx.shadowColor = COLORS[colorIdx]; ctx.shadowBlur = 2 + disp * 0.3; }
-      ctx.fillText(ch[i], x + dx, y + dy);
+      ctx.fillText(ch[i], dxArr[i], dyArr[i]);
     }
     if (GLOW) ctx.shadowBlur = 0;
-
-    requestAnimationFrame(animate);
   }
 
-  // Initial draw then start
-  ctx.clearRect(0, 0, W, H);
-  ctx.font = font;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = COLORS[0];
-  if (GLOW) { ctx.shadowColor = COLORS[0]; ctx.shadowBlur = 3; }
-  for (var i = 0; i < N; i++) ctx.fillText(ch[i], hx[i], hy[i]);
-  if (GLOW) ctx.shadowBlur = 0;
+  /* Initial settled paint. */
+  for (var i0 = 0; i0 < N; i0++) { dxArr[i0] = hx[i0]; dyArr[i0] = hy[i0]; colorOf[i0] = 0; }
+  draw();
 
-  requestAnimationFrame(animate);
+  var loop = FX.loop(canvas, { step: step, draw: draw });
 
-  /* ── Resize ────────────────────────────────────────────────── */
-  var resizeTimer;
-  window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
-      W = wrap.clientWidth || 760;
-      var r = layoutText();
-      sizeCanvas(r.totalH);
-      N = r.data.length;
-      hx  = new Float32Array(N);
-      hy  = new Float32Array(N);
-      ch  = new Array(N);
-      row = new Uint16Array(N);
-      for (var i = 0; i < N; i++) {
-        hx[i]  = r.data[i].hx;
-        hy[i]  = r.data[i].hy;
-        ch[i]  = r.data[i].ch;
-        row[i] = r.data[i].row;
-      }
-    }, 300);
+  /* ── Interaction ───────────────────────────────────────────── */
+  /* Ripples now come from the unified tap path, so touch and mouse behave
+     identically; dragging a finger disturbs the surface the way hovering
+     a mouse does. */
+  FX.pointer(canvas, {
+    onTap:       function (x, y) { addRipple(x, y); loop.wake(); },
+    onDoubleTap: function (x, y) {
+      addRipple(x, y);
+      ripples.forEach(function (r) { r.amp = RIPPLE_AMP; });
+      loop.wake();
+    },
+    onHover:     function (x, y) { pointerX = x; pointerY = y; },
+    onDragStart: function (x, y) { addRipple(x, y); loop.wake(); },
+    onDragMove:  function (x, y) { pointerX = x; pointerY = y; },
+    onDragEnd:   function () { pointerX = -999; pointerY = -999; },
+    onHoverEnd:  function () { pointerX = -999; pointerY = -999; }
   });
 
+  FX.controls(wrap, {
+    loop: loop,
+    onRead: function () {},
+    hint: {
+      hover: 'click to send ripples · hover to disturb',
+      touch: 'tap to send ripples · drag sideways to disturb'
+    }
+  });
+
+  FX.onResize(function () {
+    build();
+    ripples.length = 0;
+    loop.wake();
+  });
 })();

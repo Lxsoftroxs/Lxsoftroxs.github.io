@@ -7,7 +7,7 @@ layout: default
   <div class="flame-ember" data-flame>
     <div class="flame-source">{{ content }}</div>
     <canvas class="flame-canvas"></canvas>
-    <p class="flame-hint">click to ignite &middot; double-click to reform</p>
+    <p class="flame-hint" data-fx-hint>click to ignite &middot; double-click to reform</p>
   </div>
 </article>
 <hr>
@@ -20,4 +20,5 @@ layout: default
           async>
   </script>
 </section>
+<script defer src="{{ '/assets/js/fx-runtime.js' | relative_url }}"></script>
 <script defer src="{{ '/assets/js/flame-ember.js' | relative_url }}"></script>

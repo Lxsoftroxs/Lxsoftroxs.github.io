@@ -7,7 +7,7 @@ layout: default
   <div class="typewriter-glitch" data-typewriter>
     <div class="typewriter-source">{{ content }}</div>
     <canvas class="typewriter-canvas"></canvas>
-    <p class="typewriter-hint">click to corrupt &middot; double-click to retype</p>
+    <p class="typewriter-hint" data-fx-hint>click to corrupt &middot; double-click to retype</p>
   </div>
 </article>
 <hr>
@@ -20,4 +20,5 @@ layout: default
           async>
   </script>
 </section>
+<script defer src="{{ '/assets/js/fx-runtime.js' | relative_url }}"></script>
 <script defer src="{{ '/assets/js/typewriter-glitch.js' | relative_url }}"></script>
