@@ -29,6 +29,7 @@
   var RADIUS       = 43;   // half of visual ball (--size: 86px)
   var SHAPE_MARGIN = 14;   // breathing room between ball edge and text
   var EFF_R        = RADIUS + SHAPE_MARGIN;
+  var MIN_RUN      = 48;   // narrower than this, a gap gets no text at all
 
   /* Loaded lazily and off the critical path — the post is fully readable
      without it, so nothing waits on the network. */
@@ -87,6 +88,38 @@
       return Math.abs(d) < EFF_R ? Math.sqrt(EFF_R * EFF_R - d * d) : 0;
     }
 
+    /* Pull the next run of text that fits in `maxW`, advancing the shared
+       cursor. Returns null when the paragraph is exhausted (st.done) or when
+       the gap is too narrow to fit even one more grapheme — the caller then
+       tries the other side of the ball, or drops to the next row. */
+    function takeRun(prepared, st, maxW, fullW, cleanOnly) {
+      var line = pt.layoutNextLine(prepared, st.cursor, maxW);
+      if (!line) {
+        /* Nothing came back. That only means the paragraph is finished if the
+           full column width comes back empty too — a narrow gap must never be
+           mistaken for the end of the text. */
+        if (maxW >= fullW || exhausted(prepared, st, fullW)) st.done = true;
+        return null;
+      }
+
+      var end = line.end;
+      if (end.segmentIndex  === st.cursor.segmentIndex &&
+          end.graphemeIndex === st.cursor.graphemeIndex) return null;
+
+      /* A non-zero grapheme index means the break landed inside a word.
+         pretext does that when the run is narrower than the word it has to
+         place; next to the ball it reads as a typo, so the gap is left empty
+         and the word moves down to the first row that can hold it whole. */
+      if (cleanOnly && end.graphemeIndex !== 0) return null;
+
+      st.cursor = end;
+      return line.text;
+    }
+
+    function exhausted(prepared, st, W) {
+      return !pt.layoutNextLine(prepared, st.cursor, W);
+    }
+
     function render() {
       if (metricsStale) refreshMetrics();
 
@@ -110,37 +143,52 @@
         if (untouched && pd.laidOutClear) continue;
 
         var lines = [];
-        var cursor = { segmentIndex: 0, graphemeIndex: 0 };
+        var st = { cursor: { segmentIndex: 0, graphemeIndex: 0 }, done: false };
         var y = pTop;
 
-        for (var safety = 0; safety < 500; safety++) {
+        for (var safety = 0; safety < 500 && !st.done; safety++) {
           var mid = y + lineHeight * 0.5;
           var h   = hw(cy, mid);
+          var runs = [];
 
-          var maxW = W, ml = 0;
-          if (h > 0) {
-            var leftSpace  = cx - h;
-            var rightSpace = W - (cx + h);
-            if (rightSpace >= leftSpace) {
-              ml   = Math.max(0, cx + h);
-              maxW = Math.max(20, W - ml);
-            } else {
-              maxW = Math.max(20, leftSpace);
+          if (h <= 0) {
+            var full = takeRun(pd.prepared, st, W, W);
+            if (full === null) break;
+            runs.push({ t: full, x: 0, w: W });
+          } else {
+            /* The ball cuts this row in two. Fill the gap to its left, then
+               continue the *same* row in the gap to its right, so the text
+               closes around the ball instead of only clearing whichever
+               side happened to be roomier. */
+            var leftW  = clamp(cx - h, 0, W);
+            var rightX = clamp(cx + h, 0, W);
+            var rightW = Math.max(0, W - rightX);
+
+            if (leftW >= MIN_RUN) {
+              var lt = takeRun(pd.prepared, st, leftW, W, true);
+              if (lt !== null) runs.push({ t: lt, x: 0, w: leftW });
+            }
+            if (!st.done && rightW >= MIN_RUN) {
+              var rt = takeRun(pd.prepared, st, rightW, W, true);
+              if (rt !== null) runs.push({ t: rt, x: rightX, w: rightW });
+            }
+
+            if (!runs.length) {
+              /* Neither gap took anything: hold the row open and let the
+                 text resume below the ball. */
+              if (st.done || exhausted(pd.prepared, st, W)) break;
+              runs.push({ t: ' ', x: 0, w: W });
             }
           }
 
-          var line = pt.layoutNextLine(pd.prepared, cursor, maxW);
-          if (!line) break;
-
-          lines.push({ t: line.text, m: ml });
-          cursor = line.end;
+          lines.push(runs);
           y += lineHeight;
         }
 
         pd.laidOutClear = untouched;
 
         var need = lines.length;
-        while (pd.divs.length < need) pd.divs.push(document.createElement('div'));
+        while (pd.divs.length < need) pd.divs.push(newLine());
 
         if (need !== pd.active) {
           pd.el.textContent = '';
@@ -149,13 +197,43 @@
           metricsStale = true;   // line count changed, offsets moved
         }
 
-        for (var k = 0; k < need; k++) {
-          var div = pd.divs[k];
-          var lt  = lines[k].t;
-          var lm  = lines[k].m + 'px';
-          if (div._pt !== lt) { div.textContent = lt; div._pt = lt; }
-          if (div._pm !== lm) { div.style.marginLeft = lm; div._pm = lm; }
-        }
+        for (var k = 0; k < need; k++) writeLine(pd.divs[k], lines[k]);
+      }
+    }
+
+    function newLine() {
+      var div = document.createElement('div');
+      div._spans = [];
+      div._n = -1;
+      return div;
+    }
+
+    /* A row can carry two runs — one either side of the ball — so each line
+       element holds a span per run, sized to its gap and offset from the end
+       of the previous one. Spans are reused; only what actually changed is
+       written back to the DOM. */
+    function writeLine(div, runs) {
+      var spans = div._spans;
+      while (spans.length < runs.length) {
+        var s = document.createElement('span');
+        s.style.cssText = 'display:inline-block;vertical-align:top;white-space:pre';
+        spans.push(s);
+      }
+
+      if (div._n !== runs.length) {
+        div.textContent = '';
+        for (var i = 0; i < runs.length; i++) div.appendChild(spans[i]);
+        div._n = runs.length;
+      }
+
+      var prevEnd = 0;
+      for (var j = 0; j < runs.length; j++) {
+        var r = runs[j], sp = spans[j];
+        var ml = Math.max(0, r.x - prevEnd);
+        if (sp._t  !== r.t) { sp.textContent   = r.t;         sp._t  = r.t; }
+        if (sp._ml !== ml)  { sp.style.marginLeft = ml + 'px'; sp._ml = ml; }
+        if (sp._w  !== r.w) { sp.style.width      = r.w + 'px'; sp._w = r.w; }
+        prevEnd = r.x + r.w;
       }
     }
 
