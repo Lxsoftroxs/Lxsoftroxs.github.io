@@ -8,6 +8,8 @@ permalink: /quotes/
 "If you had no bad luck, you would have no luck at all"                                  
 — My mother
 
+"God is dead, but the platitudes linger"
+-Greg Egan
 
 "Where'd he come from? Where'd you come from? What are you doing here? Canis Lupus! Vuples Vulpes! I don't think he speaks English or Latin. Pensez-vous que 1'hiver sera rude?  I'm asking if he thinks we're in for a hard winter"       
 ― Wes Anderson, Fantastic Mr. Fox
