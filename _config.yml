@@ -11,7 +11,7 @@ lastfm_api_key: "01f055a2397afef55e6bef6e3d684510"
 # GoatCounter visitor analytics (https://www.goatcounter.com).
 # Set this to your site code, e.g. "lxsoft" for https://lxsoft.goatcounter.com.
 # Leave empty to disable tracking. Only loaded on the live (production) site.
-goatcounter_code: ""
+goatcounter_code: "lxsoft"
 
 collections:
   journal:
