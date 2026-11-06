@@ -34,5 +34,8 @@
   <script defer src="{{ '/assets/js/no-flash.js' | relative_url }}"></script>
   <script defer src="{{ '/assets/js/nav.js' | relative_url }}"></script>
   <script defer src="{{ '/assets/js/footer-subscribe.js' | relative_url }}"></script>
+  {%- if site.goatcounter_code and site.goatcounter_code != "" and jekyll.environment == "production" %}
+  <script data-goatcounter="https://{{ site.goatcounter_code }}.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  {%- endif %}
 </body>
 </html>
