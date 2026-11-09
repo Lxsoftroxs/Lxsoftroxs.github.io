@@ -1,0 +1,35 @@
+# Projects without their own page yet — shown as cards under "On the shelf"
+# on /projects/. When one gets real hardware or a first test, move it to
+# _projects/<name>.md with `layout: project`.
+#
+# status: research | design   (controls the badge colour)
+
+- title: "Santa Cruz Meshtastic Net"
+  status: design
+  stage: "Designed, priced"
+  summary: "An off-grid LoRa texting mesh for about ten people around UCSC and downtown, with solar relay nodes, built to work with no outlet power and to join the existing Bay Area mesh."
+  next: "Buy and range-test one handheld unit"
+
+- title: "DIY Carbidizer"
+  status: research
+  stage: "Researched"
+  summary: "A cheap electro-spark deposition rig to lay tungsten carbide onto knife edges and wear surfaces, using a vibrating engraver, a bench DC supply and a carbide rod."
+  next: "Settle power and electrode setup, then a first test on scrap steel"
+
+- title: "DIY Textiles: loom, denim, shirts"
+  status: research
+  stage: "Researched"
+  summary: "Wearable clothes woven from raw yarn on a portable loom under $100: 14 oz denim for jeans and linen for shirts, joined from narrow panels."
+  next: "Get a compact loom and weave a test swatch"
+
+- title: "Cotton and Flax"
+  status: research
+  stage: "Researched"
+  summary: "Growing my own fibre for the textile project: yields per square foot, a small greenhouse, and processing flax into linen."
+  next: "A small grow trial"
+
+- title: "DIY A4 Notebooks"
+  status: research
+  stage: "Researched"
+  summary: "Fountain-pen-friendly A4 notebooks (120 gsm+) from wholesale paper, bound in my own leather, for less than store-bought."
+  next: "Order a test batch of paper and check feathering and bleed"

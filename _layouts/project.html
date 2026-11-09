@@ -1,0 +1,76 @@
+---
+layout: default
+---
+{%- comment -%}
+  Living project page. Front matter it reads:
+    status    building | design | drafting | research | done | shelved
+    summary   one line, also shown on the /projects/ index
+    started   date (optional)
+    updated   date — bump this whenever the page changes
+    next      the next milestone (omit when done)
+    checklist list of { text, done }
+    log       list of { date, text }, newest first
+  Posts with `project: <this page's file name>` in their front matter are
+  listed automatically under "Posts".
+{%- endcomment -%}
+{%- assign status_labels = "building:Building,design:Designing,drafting:Drafting,research:Researching,done:Done,shelved:Shelved" | split: "," -%}
+{%- assign status_label = page.status -%}
+{%- for pair in status_labels -%}
+  {%- assign kv = pair | split: ":" -%}
+  {%- if kv[0] == page.status -%}{%- assign status_label = kv[1] -%}{%- endif -%}
+{%- endfor -%}
+<article class="page project">
+  <p class="project-back"><a href="{{ '/projects/' | relative_url }}">&larr; All projects</a></p>
+  <h1 class="page-title">{{ page.title }}</h1>
+
+  <div class="project-meta">
+    {% if page.status %}<span class="status-badge status-{{ page.status }}">{{ status_label }}</span>{% endif %}
+    {% if page.started %}<span>Started {{ page.started | date: "%b %Y" }}</span>{% endif %}
+    {% if page.updated %}<span>Updated {{ page.updated | date: "%b %-d, %Y" }}</span>{% endif %}
+  </div>
+
+  {% if page.summary %}<p class="project-summary">{{ page.summary }}</p>{% endif %}
+
+  {% if page.next %}
+  <p class="project-next"><span class="label">Next milestone</span> {{ page.next }}</p>
+  {% endif %}
+
+  {% if page.checklist %}
+  {%- assign done_count = page.checklist | where: "done", true | size -%}
+  <section class="project-checklist" aria-label="Progress">
+    <h2>Progress <span class="count">{{ done_count }}/{{ page.checklist | size }}</span></h2>
+    <ul>
+      {% for item in page.checklist %}
+      <li class="{% if item.done %}is-done{% endif %}"><span class="box" aria-hidden="true">{% if item.done %}&#10003;{% else %}&nbsp;{% endif %}</span><span class="sr-only">{% if item.done %}Done: {% else %}To do: {% endif %}</span>{{ item.text }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <div class="page-content project-content">
+    {{ content }}
+  </div>
+
+  {%- assign related = site.posts | where: "project", page.slug -%}
+  {% if related.size > 0 %}
+  <section class="project-posts">
+    <h2>Posts</h2>
+    <ul>
+      {% for post in related %}
+      <li><a href="{{ post.url | relative_url }}">{{ post.title }}</a> <span class="date">{{ post.date | date: "%b %-d, %Y" }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if page.log %}
+  <section class="project-log">
+    <h2>Log</h2>
+    <ul>
+      {% for entry in page.log %}
+      <li><span class="date">{{ entry.date }}</span> {{ entry.text }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</article>

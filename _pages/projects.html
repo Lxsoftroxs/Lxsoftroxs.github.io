@@ -3,16 +3,80 @@ layout: default
 title: "Projects"
 permalink: /projects/
 ---
+{%- comment -%}
+  Groups come from each project's `status` front matter (see _layouts/project.html).
+  Ideas without their own page live in _data/project_shelf.yml.
+{%- endcomment -%}
+{%- assign all = site.projects | sort: "updated" | reverse -%}
+{%- assign ongoing = all | where_exp: "p", "p.status != 'done'" | where_exp: "p", "p.status != 'shelved'" -%}
+{%- assign finished = all | where: "status", "done" | where_exp: "p", "p.kind != 'toy'" -%}
+{%- assign toys = all | where: "kind", "toy" -%}
+{%- assign status_labels = "building:Building,design:Designing,drafting:Drafting,research:Researching,done:Done,shelved:Shelved" | split: "," -%}
+
 <h1>Projects</h1>
-<ul class="projects-list">
-  {% for project in site.projects %}
-    <li>
-      <a href="{{ project.url }}">
-        <strong>{{ project.title }}</strong>
-      </a>
-      {% if project.description %}
-        <p>{{ project.description }}</p>
-      {% endif %}
+<p class="projects-intro">Things I'm building, designing, or just thinking hard about. Pages get updated as the work moves.</p>
+
+{% if ongoing.size > 0 %}
+<section class="project-group">
+  <h2>In progress</h2>
+  <ul class="project-cards">
+    {% for project in ongoing %}
+      {%- assign label = project.status -%}
+      {%- for pair in status_labels -%}{%- assign kv = pair | split: ":" -%}{%- if kv[0] == project.status -%}{%- assign label = kv[1] -%}{%- endif -%}{%- endfor -%}
+    <li class="project-card">
+      <a href="{{ project.url | relative_url }}"><strong>{{ project.title }}</strong></a>
+      <span class="status-badge status-{{ project.status }}">{{ label }}</span>
+      {% if project.summary %}<p>{{ project.summary }}</p>{% endif %}
+      {% if project.next %}<p class="card-next"><span class="label">Next:</span> {{ project.next }}</p>{% endif %}
+      {% if project.updated %}<p class="card-date">Updated {{ project.updated | date: "%b %-d, %Y" }}</p>{% endif %}
     </li>
-  {% endfor %}
-</ul>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if finished.size > 0 %}
+<section class="project-group">
+  <h2>Finished</h2>
+  <ul class="project-cards">
+    {% for project in finished %}
+    <li class="project-card">
+      <a href="{{ project.url | relative_url }}"><strong>{{ project.title }}</strong></a>
+      <span class="status-badge status-done">Done</span>
+      {% if project.summary %}<p>{{ project.summary }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if toys.size > 0 %}
+<section class="project-group">
+  <h2>Playable</h2>
+  <ul class="project-cards">
+    {% for project in toys %}
+    <li class="project-card">
+      <a href="{{ project.url | relative_url }}"><strong>{{ project.title }}</strong></a>
+      {% if project.summary %}<p>{{ project.summary }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if site.data.project_shelf %}
+<section class="project-group">
+  <h2>On the shelf</h2>
+  <p class="group-note">Researched or designed, but nothing built yet. Each gets a page once something real happens.</p>
+  <ul class="project-cards shelf">
+    {% for item in site.data.project_shelf %}
+    <li class="project-card">
+      <strong>{{ item.title }}</strong>
+      <span class="status-badge status-{{ item.status }}">{{ item.stage }}</span>
+      <p>{{ item.summary }}</p>
+      {% if item.next %}<p class="card-next"><span class="label">Next:</span> {{ item.next }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

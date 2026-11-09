@@ -1084,3 +1084,235 @@ img {
     display: none;
   }
 }
+
+/* ============================================================
+   Projects: index cards and living project pages
+   ============================================================ */
+.projects-intro,
+.group-note {
+  color: #999;
+  max-width: 640px;
+  margin: 0 auto 10px;
+}
+
+.project-group {
+  text-align: left;
+  max-width: 720px;
+  margin: 30px auto;
+}
+
+.project-group > h2 {
+  color: #6df;
+  border-bottom: 1px solid #333;
+  padding-bottom: 6px;
+  font-size: 1.3em;
+}
+
+.project-cards {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.project-card {
+  background: #151515;
+  border: 1px solid #2a2a2a;
+  border-left: 3px solid #6df;
+  border-radius: 6px;
+  padding: 12px 14px;
+  line-height: 1.5;
+}
+
+.project-card a strong,
+.project-card > strong {
+  font-size: 1.1em;
+  color: #6df;
+}
+
+.project-cards.shelf .project-card {
+  border-left-color: #555;
+}
+
+.project-cards.shelf .project-card > strong {
+  color: #ccc;
+}
+
+.project-card p {
+  margin: 8px 0 0;
+  color: #bbb;
+  font-size: 0.95em;
+}
+
+.project-card .card-next,
+.project-next {
+  color: #ddd;
+}
+
+.project-card .card-date {
+  color: #777;
+  font-size: 0.85em;
+}
+
+.label {
+  color: #999;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  letter-spacing: 0.05em;
+}
+
+.status-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+  color: #aaa;
+}
+.status-building { color: #f7b955; }
+.status-design   { color: #6df; }
+.status-drafting { color: #c792ea; }
+.status-research { color: #999; }
+.status-done     { color: #7ee787; }
+.status-shelved  { color: #666; }
+
+/* Project page */
+.project .project-back {
+  text-align: left;
+  margin: 0 0 10px;
+  font-size: 0.9em;
+}
+
+.project-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 14px;
+  color: #999;
+  font-size: 0.9em;
+}
+.project-meta .status-badge { margin-left: 0; }
+
+.project-summary {
+  color: #ccc;
+  max-width: 640px;
+  margin: 14px auto;
+}
+
+.project-next,
+.project-callout {
+  text-align: left;
+  background: #151515;
+  border-left: 3px solid #f7b955;
+  padding: 10px 14px;
+  border-radius: 4px;
+}
+.project-callout { border-left-color: #c792ea; color: #bbb; }
+
+.project-checklist,
+.project-log,
+.project-posts {
+  text-align: left;
+  margin: 24px 0;
+}
+
+.project-checklist h2,
+.project-log h2,
+.project-posts h2,
+.project-content h2 {
+  color: #6df;
+  font-size: 1.2em;
+  border-bottom: 1px solid #333;
+  padding-bottom: 4px;
+}
+
+.project-checklist ul,
+.project-log ul,
+.project-posts ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.project-checklist li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 0;
+}
+.project-checklist li.is-done { color: #888; }
+
+.project-checklist .box {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  line-height: 1.1em;
+  text-align: center;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #7ee787;
+}
+
+.project-log li,
+.project-posts li {
+  padding: 5px 0;
+  border-bottom: 1px dashed #2a2a2a;
+}
+
+.project-log .date,
+.project-posts .date {
+  color: #999;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+/* Tables inside project pages and posts */
+.project-content table,
+.post-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+}
+.project-content th,
+.project-content td,
+.post-content th,
+.post-content td {
+  border: 1px solid #333;
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.project-content th,
+.post-content th {
+  background: #222;
+  color: #6df;
+}
+
+.post-content pre,
+.project-content pre {
+  background: #0d0d0d;
+  border: 1px solid #333;
+  padding: 10px;
+  overflow-x: auto;
+}
+
+.post-figure {
+  margin: 20px 0;
+  text-align: center;
+}
+.post-figure figcaption {
+  color: #999;
+  font-size: 0.85em;
+  margin-top: 6px;
+}
