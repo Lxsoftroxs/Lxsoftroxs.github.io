@@ -42,5 +42,3 @@ I also researched sealing that won't darken the leather.
 ## Ideas queued
 
 A boot-mounted knife sheath, leather glove patterns, and covers for the [A4 notebooks]({{ '/projects/' | relative_url }}).
-
-*Photos coming: before, during and after.*

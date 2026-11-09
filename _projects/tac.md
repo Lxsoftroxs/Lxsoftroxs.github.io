@@ -46,4 +46,27 @@ In a simplified disturbance sim, a **49.6° case rotation produced only 0.14° o
 
 Do it in stages: the math, then a dynamics sim, then a physical demonstrator, then miniaturization. The demonstrator is a printed gimbal with a dummy payload, to measure drift, friction, torque and leveling before any real tourbillon goes in. Later on, two synchronized TAC clocks.
 
-*CAD renders and sim GIFs coming.*
+## Renders
+
+<figure class="post-figure">
+  <img src="{{ '/assets/images/projects/tac/tac-gimbal-assembly.jpg' | relative_url }}" alt="The gimbal assembly on its test stand." style="width:100%;max-width:720px;height:auto" loading="lazy">
+  <figcaption>The gimbal assembly on its test stand.</figcaption>
+</figure>
+
+The October 2026 iteration moves the clock into a gyro-stabilized sphere inside a 305 mm (1 ft) cube, hand-cranked once a day.
+
+<figure class="post-figure">
+  <img src="{{ '/assets/images/projects/tac/tac-gyro-cube.jpg' | relative_url }}" alt="Picked up, tilted and turned: the sphere and the clock inside it don't rotate (about 0.9° of drift per week)." style="width:100%;max-width:720px;height:auto" loading="lazy">
+  <figcaption>Picked up, tilted and turned: the sphere and the clock inside it don't rotate (about 0.9° of drift per week).</figcaption>
+</figure>
+
+<figure class="post-figure">
+  <img src="{{ '/assets/images/projects/tac/tac-gyro-cutaway.jpg' | relative_url }}" alt="Cutaway with one quarter removed." style="width:100%;max-width:720px;height:auto" loading="lazy">
+  <figcaption>Cutaway with one quarter removed.</figcaption>
+</figure>
+
+<figure class="post-figure">
+  <img src="{{ '/assets/images/projects/tac/tac-gyro-exploded.jpg' | relative_url }}" alt="Exploded view: one gyro above and one below a flat printed tourbillon in Cardan rings." style="width:100%;max-width:720px;height:auto" loading="lazy">
+  <figcaption>Exploded view: one gyro above and one below a flat printed tourbillon in Cardan rings.</figcaption>
+</figure>
+

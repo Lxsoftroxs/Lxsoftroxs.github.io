@@ -6,11 +6,11 @@ status: done
 summary: "An open-air \"destructive museum\" on a dead golf course: visitors trample their own paths, water tanks show what an acre costs, and the course turns back into prairie."
 updated: 2026-11-09
 checklist:
-  - { text: "Exhibition proposal (312 words) for HAVC 40", done: true }
+  - { text: "Exhibition proposal for HAVC 40", done: true }
   - { text: "Sourced data sheet and conversion key", done: true }
   - { text: "Blog write-up", done: true }
 log:
-  - { date: "Nov 9, 2026", text: "Published the essay." }
+  - { date: "Nov 9, 2026", text: "Published the essay; re-checked every figure against its source and switched the tanks to Arizona numbers." }
   - { date: "Jun 2026", text: "Proposal finished for HAVC 40." }
 ---
 

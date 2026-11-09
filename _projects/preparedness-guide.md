@@ -13,6 +13,7 @@ checklist:
   - { text: "Natural-disaster track: earthquake, tsunami, wildfire, go-bag, meetup plan", done: false }
   - { text: "Decide on water prep: an RO stage or stored water", done: false }
 log:
+  - { date: "Oct 28, 2026", text: "Revised the full draft." }
   - { date: "Apr 2026", text: "Expanded the guide to ten sections." }
 ---
 

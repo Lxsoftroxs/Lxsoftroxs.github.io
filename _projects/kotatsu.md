@@ -4,7 +4,7 @@ title: "Kotatsu + Jaipur Quilt"
 permalink: /projects/kotatsu/
 status: building
 summary: "A Japanese heated table (a real kotatsu heater under a wooden table, with a block-printed Jaipur quilt over it) for under $200."
-started: 2026-10-21
+started: 2026-10-20
 updated: 2026-11-09
 next: "Heater arrives (Nov 18 – Dec 3); buy a step-down converter and pick the table route"
 checklist:
@@ -15,6 +15,7 @@ checklist:
   - { text: "Table and topper, built or bought", done: false }
   - { text: "Assemble, test, and log temperatures", done: false }
 log:
+  - { date: "Oct 20, 2026", text: "Quilt ordered from JaipurFabric." }
   - { date: "Oct 21, 2026", text: "Heater bought from Japan: $49.26 + $30 shipping." }
 ---
 
