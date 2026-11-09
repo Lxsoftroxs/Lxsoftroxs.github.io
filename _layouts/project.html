@@ -10,8 +10,8 @@ layout: default
     next      the next milestone (omit when done)
     checklist list of { text, done }
     log       list of { date, text }, newest first
-  Posts with `project: <this page's file name>` in their front matter are
-  listed automatically under "Posts".
+  Posts and essays with `project: <this page's file name>` in their front
+  matter are listed automatically under "Writing".
 {%- endcomment -%}
 {%- assign status_labels = "building:Building,design:Designing,drafting:Drafting,research:Researching,done:Done,shelved:Shelved" | split: "," -%}
 {%- assign status_label = page.status -%}
@@ -51,10 +51,12 @@ layout: default
     {{ content }}
   </div>
 
-  {%- assign related = site.posts | where: "project", page.slug -%}
+  {%- assign related_essays = site.essays | where: "project", page.slug -%}
+  {%- assign related_posts = site.posts | where: "project", page.slug -%}
+  {%- assign related = related_essays | concat: related_posts -%}
   {% if related.size > 0 %}
   <section class="project-posts">
-    <h2>Posts</h2>
+    <h2>Writing</h2>
     <ul>
       {% for post in related %}
       <li><a href="{{ post.url | relative_url }}">{{ post.title }}</a> <span class="date">{{ post.date | date: "%b %-d, %Y" }}</span></li>

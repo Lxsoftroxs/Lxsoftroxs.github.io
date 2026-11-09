@@ -1316,3 +1316,28 @@ img {
   font-size: 0.85em;
   margin-top: 6px;
 }
+
+/* Essays index */
+.essays-list {
+  list-style: none;
+  padding-left: 0;
+  text-align: left;
+  max-width: 700px;
+  margin: 20px auto;
+}
+.essays-list li {
+  margin-bottom: 22px;
+  line-height: 1.7;
+}
+.essays-list a {
+  font-size: 1.2em;
+  color: #6df;
+}
+.essays-list .date {
+  color: #999;
+  margin-left: 10px;
+}
+.essays-list p {
+  margin: 6px 0 0;
+  color: #bbb;
+}

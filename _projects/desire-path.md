@@ -10,10 +10,10 @@ checklist:
   - { text: "Sourced data sheet and conversion key", done: true }
   - { text: "Blog write-up", done: true }
 log:
-  - { date: "Nov 9, 2026", text: "Published the write-up." }
+  - { date: "Nov 9, 2026", text: "Published the essay." }
   - { date: "Jun 2026", text: "Proposal finished for HAVC 40." }
 ---
 
-The proposal is finished, and the full write-up is in the post below. It covers the site, the eighteen tanks, the pillars and the math behind them.
+The proposal is finished, and the full write-up is in the essay below. It covers the site, the eighteen tanks, the pillars and the math behind them.
 
 A possible next phase is *Desire Paths: A Museum of Human Movement*. That would be a fuller exhibit about how designed landscapes steer movement, water, labor and restoration, with case studies and visitor-experience designs.

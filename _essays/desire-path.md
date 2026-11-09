@@ -2,6 +2,8 @@
 layout: post
 title: "Desire Path"
 date: 2026-11-09
+permalink: /essays/desire-path/
+summary: "A museum you destroy by walking through it: a dead golf course, eighteen water tanks, and the question of what an acre owes the world."
 project: desire-path
 ---
 A museum you destroy by walking through it.
