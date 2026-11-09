@@ -21,6 +21,9 @@ collections:
   poetry:
     output: true
     permalink: /poetry/:title/
+  essays:
+    output: true
+    permalink: /essays/:title/
   pages:
     output: true
     permalink: /:path/

@@ -1,0 +1,17 @@
+---
+layout: default
+title: "Essays"
+permalink: /essays/
+---
+{%- assign essays = site.essays | sort: "date" | reverse -%}
+<h1>Essays</h1>
+<p class="projects-intro">Longer, finished pieces: proposals, arguments, things worked out properly.</p>
+
+<ul class="essays-list">
+  {% for essay in essays %}
+  <li>
+    <a href="{{ essay.url | relative_url }}">{{ essay.title }}</a><span class="date">{{ essay.date | date: "%B %-d, %Y" }}</span>
+    {% if essay.summary %}<p>{{ essay.summary }}</p>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
