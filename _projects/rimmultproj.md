@@ -6,7 +6,7 @@ status: design
 summary: "Designing a RimWorld multiplayer mod with real interactions (raids, trades, joint defense), no desyncs, 100+ players per server, and play while friends are offline."
 started: 2026-01-01
 updated: 2026-11-09
-next: "Snapshot proof of concept: save and restore a colony byte-for-byte on two machines"
+next_step: "Snapshot proof of concept: save and restore a colony byte-for-byte on two machines"
 checklist:
   - { text: "Architecture document", done: true }
   - { text: "12-month project plan", done: true }

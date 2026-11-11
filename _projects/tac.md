@@ -5,7 +5,7 @@ permalink: /projects/tac/
 status: design
 summary: "A triple-axis tourbillon in a gimballed enclosure with two modes: FLOAT holds its orientation however the case moves, and LEVEL aligns it with gravity on demand."
 updated: 2026-11-09
-next: "A way to disengage the transmission in FLOAT, then a printed gimbal demonstrator"
+next_step: "A way to disengage the transmission in FLOAT, then a printed gimbal demonstrator"
 checklist:
   - { text: "Gimbal layouts, gear transmission, differential gearing explored in CAD", done: true }
   - { text: "TAC-2 smaller redesign, checked for watertight meshes and interference", done: true }

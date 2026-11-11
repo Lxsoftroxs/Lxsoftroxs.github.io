@@ -6,7 +6,7 @@ status: building
 summary: "A Japanese heated table (a real kotatsu heater under a wooden table, with a block-printed Jaipur quilt over it) for under $200."
 started: 2026-10-20
 updated: 2026-11-09
-next: "Heater arrives (Nov 18 – Dec 3); buy a step-down converter and pick the table route"
+next_step: "Heater arrives (Nov 18 – Dec 3); buy a step-down converter and pick the table route"
 checklist:
   - { text: "Quilt ordered (JaipurFabric \"Golden Corn\" reversible)", done: true }
   - { text: "Heater ordered (METRO MSU501H-K, 500 W, 100 V)", done: true }

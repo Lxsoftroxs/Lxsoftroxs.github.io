@@ -5,7 +5,7 @@ permalink: /projects/leather-and-boots/
 status: building
 summary: "Rebuilding, repairing and customizing leather boots by hand instead of buying new: a Wolverine BLVD rebuild is underway."
 updated: 2026-11-09
-next: "Finish the BLVD rebuild, then wear-test it for a month"
+next_step: "Finish the BLVD rebuild, then wear-test it for a month"
 checklist:
   - { text: "BLVD: sole and insole taken apart, foam insole pulled", done: true }
   - { text: "BLVD: leather insole cut, fitted, hand-stitching started", done: true }

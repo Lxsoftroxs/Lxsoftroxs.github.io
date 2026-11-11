@@ -27,7 +27,7 @@ permalink: /projects/
       <a href="{{ project.url | relative_url }}"><strong>{{ project.title }}</strong></a>
       <span class="status-badge status-{{ project.status }}">{{ label }}</span>
       {% if project.summary %}<p>{{ project.summary }}</p>{% endif %}
-      {% if project.next %}<p class="card-next"><span class="label">Next:</span> {{ project.next }}</p>{% endif %}
+      {% if project.next_step %}<p class="card-next"><span class="label">Next:</span> {{ project.next_step }}</p>{% endif %}
       {% if project.updated %}<p class="card-date">Updated {{ project.updated | date: "%b %-d, %Y" }}</p>{% endif %}
     </li>
     {% endfor %}

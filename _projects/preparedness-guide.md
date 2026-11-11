@@ -5,7 +5,7 @@ permalink: /projects/preparedness-guide/
 status: drafting
 summary: "A practical preparedness guide for Santa Cruz covering nuclear emergencies first, with an earthquake, tsunami and wildfire track to come."
 updated: 2026-11-09
-next: "Fold the April expansion into one clean version, then add the natural-disaster track"
+next_step: "Fold the April expansion into one clean version, then add the natural-disaster track"
 checklist:
   - { text: "First draft of the nuclear survival guide", done: true }
   - { text: "Ten-section expansion (Apr 2026)", done: true }
