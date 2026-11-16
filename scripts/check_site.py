@@ -13,6 +13,10 @@ being edited:
   * project pages with missing or invalid front matter, or front matter keys
     that Jekyll reserves (`next`, `previous`)
   * two pages claiming the same permalink
+  * posts, journal entries, poems and timeline events with a missing or
+    malformed date, or a file name Jekyll will silently skip
+  * diary photos listed in _data/diary_photos.yml that are not on disk
+  * files or folders with spaces or odd characters in assets/
 
 Exit code 0 = clean, 1 = problems found. Run by .github/workflows/site-check.yml.
 """
@@ -151,6 +155,41 @@ def check_project(path, keys):
                      "listed under In progress")
 
 
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+
+
+def check_content(path, keys):
+    """Per-collection rules for content files."""
+    folder = path.parent.name
+    if folder == "_posts" and not re.match(r"\d{4}-\d{2}-\d{2}-.+\.(md|markdown|html)$", path.name):
+        err(path, 1, "post file name must look like YYYY-MM-DD-title.md, or Jekyll skips it")
+    if folder in {"_posts", "_journal", "_poetry", "_essays", "_timeline"}:
+        date = keys.get("date", "")
+        if folder in {"_posts", "_journal"} and not date:
+            return  # date comes from the file name
+        if not DATE_RE.match(date):
+            err(path, 1, f"front matter 'date' must be YYYY-MM-DD (found '{date or 'nothing'}')")
+    if folder in {"_poetry", "_essays", "_timeline"} and not keys.get("title"):
+        err(path, 1, "front matter is missing 'title'")
+    if folder != "_timeline" and "layout" in keys:
+        if not (ROOT / "_layouts" / (keys["layout"] + ".html")).is_file() and keys["layout"] not in {"null", "none"}:
+            err(path, 1, f"layout '{keys['layout']}' does not exist in _layouts/")
+
+
+def check_data_and_assets():
+    data = ROOT / "_data" / "diary_photos.yml"
+    if data.is_file():
+        text = data.read_text(encoding="utf-8")
+        for m in re.finditer(r"^\s*src:\s*(\S+)", text, re.M):
+            ref = m.group(1).strip("\"'")
+            if not (ROOT / ref.lstrip("/")).is_file():
+                err(data, line_of(text, m.start()), f"diary photo '{ref}' is not on disk")
+    for p in sorted((ROOT / "assets").rglob("*")):
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", p.name):
+            err(p, 1, "asset names should use only letters, digits, '.', '_' and '-' "
+                      "(spaces and symbols break links)")
+
+
 def main():
     allowed_hosts = csp_script_hosts()
     if allowed_hosts is None:
@@ -171,6 +210,7 @@ def main():
                          f"page instead of your value; rename it (e.g. '{key}_step')")
         if path.parent.name == "_projects":
             check_project(path, keys)
+        check_content(path, keys)
         link = keys.get("permalink")
         if link and ":" not in link:
             norm = "/" + link.strip("/") + "/" if link.strip("/") else "/"
@@ -178,6 +218,17 @@ def main():
                 err(path, 1, f"permalink '{link}' is already used by {permalinks[norm].relative_to(ROOT)}")
             else:
                 permalinks[norm] = path
+
+    for extra in sorted((ROOT / "_timeline").glob("*.md")):
+        if extra.name == "README.md":
+            continue
+        count += 1
+        front, _ = split_front_matter(extra.read_text(encoding="utf-8"))
+        if front is None:
+            err(extra, 1, "timeline event has no front matter")
+        else:
+            check_content(extra, top_level_keys(front))
+    check_data_and_assets()
 
     if errors:
         print(f"check_site: {len(errors)} problem(s) in {count} files\n")

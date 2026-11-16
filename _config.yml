@@ -36,3 +36,11 @@ collections:
 exclude:
   - _timeline/README.md
   - _comments/README.md
+  # Repo housekeeping, not site content
+  - README.md
+  - SETUP_INSTRUCTIONS.md
+  - Gemfile
+  - Gemfile.lock
+  - scripts
+  - subscribers.json
+  - vendor

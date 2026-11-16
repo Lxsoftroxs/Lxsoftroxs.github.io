@@ -2,13 +2,18 @@ name: Site check
 
 # Fail-safe for edits: builds the site exactly the way GitHub Pages does and
 # opens every page in a real browser, so a change to one section cannot
-# quietly break another. Runs on every pull request and every push to main.
+# quietly break another. Runs on every pull request, every push to main, and
+# once a week.
 
 on:
   pull_request:
   push:
     branches: [main]
   workflow_dispatch:
+  # Weekly, even when nothing was edited: catches breakage from outside the
+  # repo (a CDN library changing, a GitHub Pages or browser update).
+  schedule:
+    - cron: "17 14 * * 1"
 
 permissions:
   contents: read

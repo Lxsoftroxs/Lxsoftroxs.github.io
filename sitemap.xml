@@ -1,0 +1,24 @@
+---
+layout: null
+permalink: /sitemap.xml
+sitemap: false
+---
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemaps/0.9">
+{%- assign hidden = "/secret/,/encrypt/" | split: "," %}
+{%- for doc in site.documents %}
+  {%- if doc.sitemap != false and doc.collection != "comments" and doc.collection != "timeline" %}
+  {%- unless hidden contains doc.url %}
+  <url><loc>{{ doc.url | absolute_url | xml_escape }}</loc></url>
+  {%- endunless %}
+  {%- endif %}
+{%- endfor %}
+{%- for p in site.pages %}
+  {%- assign ext = p.url | slice: -1, 1 %}
+  {%- if p.sitemap != false and ext == "/" %}
+  {%- unless hidden contains p.url %}
+  <url><loc>{{ p.url | absolute_url | xml_escape }}</loc></url>
+  {%- endunless %}
+  {%- endif %}
+{%- endfor %}
+</urlset>

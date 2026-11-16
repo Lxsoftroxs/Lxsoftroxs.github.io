@@ -3,9 +3,16 @@
   if (!dataEl) return;
   var journalEntries = JSON.parse(dataEl.textContent);
 
+  // Open on the month of the newest entry, not today's month: otherwise the
+  // calendar looks empty whenever nothing has been written this month.
   var today = new Date();
   var currentYear = today.getFullYear();
   var currentMonth = today.getMonth();
+  var newest = journalEntries.map(function (e) { return e.date; }).sort().pop();
+  if (newest && /^\d{4}-\d{2}-\d{2}$/.test(newest)) {
+    currentYear = parseInt(newest.slice(0, 4), 10);
+    currentMonth = parseInt(newest.slice(5, 7), 10) - 1;
+  }
 
   function buildCalendar(year, month) {
     var calendarDiv = document.getElementById('calendar');

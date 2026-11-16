@@ -11,6 +11,8 @@
  *   - the Content Security Policy blocks something the page itself ships
  *   - a file from this site (JS, CSS, image) is missing
  *   - a section has lost the thing that makes it work (see EXPECT below)
+ *   - a link or image on the page points at something that is not there
+ *   - a private repo file got published (see MUST_NOT_PUBLISH)
  *
  * Third-party hosts are blocked, so the test never pings analytics or comment
  * services and every page is also checked for coping when they are down.
@@ -38,18 +40,37 @@ const EXPECT = {
   '/projects/tetris/': [{ sel: 'canvas#tetris', painted: true }],
   '/projects/heading-optimisation/': [{ sel: '#run' }, { sel: '#tLim' }],
   '/projects/kotatsu/': [{ sel: '.project-checklist li', min: 2 }],
-  '/poetry/': [{ sel: '#main-content a' }],
-  '/essays/': [{ sel: '#main-content a' }],
-  '/gallery/': [{ sel: '#main-content img', min: 3 }],
+  '/poetry/': [{ sel: '.poetry-list a', min: 3 }],
+  '/poetry/first-poem/': [{ sel: '.poem-source' }, { sel: 'canvas.life-canvas' }],
+  '/essays/': [{ sel: '.essays-list a' }],
+  '/essays/desire-path/': [{ sel: '.post-content p', min: 3 }],
+  '/gallery/': [{ sel: '.gallery img', min: 3 }],
   '/quotes/': [{ sel: '#main-content' }],
-  '/journal/': [{ sel: '#journal-data' }],
-  '/diary/': [{ sel: '#diary-data' }],
-  '/timeline/': [{ sel: '#timeline-data' }],
-  '/listening/': [{ sel: '#main-content' }],
-  '/comments/': [{ sel: '#main-content' }],
-  '/patrons/': [{ sel: '#main-content' }],
+  // The calendar must open on a month that has an entry to click.
+  '/journal/': [{ sel: '#calendar td[role="button"]' }],
+  '/diary/': [{ sel: '#diary-gallery .polaroid img', min: 3 }],
+  '/timeline/': [{ sel: '#timeline-events .timeline-item', min: 3 }],
+  '/listening/': [{ sel: '#recent-list' }],
+  '/comments/': [{ sel: '#comment-form' }, { sel: '#submit-button' }],
+  '/patrons/': [{ sel: '.wishlist tbody tr', min: 3 }],
   '/secret/': [{ sel: '#unlock' }],
+  '/encrypt/': [{ sel: '#encrypt-btn' }],
+  '/404.html': [{ sel: '#main-content a' }],
 };
+
+// Files that have to exist in the built site, and repo files that must not
+// be served to visitors (kept out with `exclude:` in _config.yml).
+const MUST_PUBLISH = ['sitemap.xml', 'robots.txt', 'assets/css/style.css'];
+const MUST_NOT_PUBLISH = ['subscribers.json', 'Gemfile', 'Gemfile.lock', 'README.md',
+  'scripts/check_site.py', 'scripts/smoke_test.js'];
+
+function existsInSite(urlPath) {
+  let rel;
+  try { rel = decodeURIComponent(urlPath.split('#')[0].split('?')[0]); } catch (e) { return false; }
+  let file = path.join(SITE, path.normalize(rel));
+  if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
+  return fs.existsSync(file) || fs.existsSync(file + '.html');
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
@@ -134,6 +155,21 @@ async function checkPage(browser, origin, url) {
     if (!visible) problems.push('page body is still hidden after load');
     if ((await page.locator('#site-nav-select').count()) === 0) problems.push('site navigation is missing');
 
+    // Every link and image that points into this site must lead somewhere.
+    const refs = await page.evaluate(() => ({
+      links: [...document.querySelectorAll('a[href]')].map((a) => a.getAttribute('href')),
+      deadImages: [...document.querySelectorAll('img')]
+        .filter((i) => i.complete && i.naturalWidth === 0 && i.currentSrc &&
+          i.currentSrc.indexOf(location.origin) === 0)
+        .map((i) => i.currentSrc.replace(location.origin, '')),
+    }));
+    for (const href of new Set(refs.links)) {
+      if (href.startsWith('/') && !href.startsWith('//') && !existsInSite(href)) {
+        problems.push('broken link: ' + href);
+      }
+    }
+    for (const src of new Set(refs.deadImages)) problems.push('broken image: ' + src);
+
     for (const want of EXPECT[url] || []) {
       const count = await page.locator(want.sel).count();
       if (count < (want.min || 1)) {
@@ -161,6 +197,21 @@ async function checkPage(browser, origin, url) {
   const pages = listPages(SITE, []);
   const missing = Object.keys(EXPECT).filter((u) => !pages.includes(u));
 
+  const fileProblems = [];
+  for (const f of MUST_PUBLISH) {
+    if (!fs.existsSync(path.join(SITE, f))) fileProblems.push(`${f} is missing from the built site`);
+  }
+  for (const f of MUST_NOT_PUBLISH) {
+    if (fs.existsSync(path.join(SITE, f))) {
+      fileProblems.push(`${f} is being published; add it to exclude: in _config.yml`);
+    }
+  }
+  const sitemap = path.join(SITE, 'sitemap.xml');
+  if (fs.existsSync(sitemap)) {
+    const locs = fs.readFileSync(sitemap, 'utf8').match(/<loc>/g) || [];
+    if (locs.length < 20) fileProblems.push(`sitemap.xml lists only ${locs.length} pages`);
+  }
+
   const server = await serve();
   const origin = 'http://127.0.0.1:' + server.address().port;
   const browser = await chromium.launch();
@@ -169,6 +220,11 @@ async function checkPage(browser, origin, url) {
   for (const url of missing) {
     failed++;
     console.log(`FAIL ${url}\n       page was not built at all`);
+  }
+  if (fileProblems.length) {
+    failed++;
+    console.log('FAIL built files');
+    for (const p of fileProblems) console.log('       ' + p);
   }
   for (const url of pages) {
     const problems = await checkPage(browser, origin, url);
