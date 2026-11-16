@@ -12,6 +12,15 @@ Rules that keep sections independent:
 - **New script host?** Add it to `script-src` in `_layouts/default.html`.
 - **New section or interactive page?** Add one line to `EXPECT` in `scripts/smoke_test.js` saying what must be on the page.
 
+Things the checks also enforce, so you don't have to remember them:
+
+- posts are named `YYYY-MM-DD-title.md`; poems, essays and timeline events have a `title` and a `YYYY-MM-DD` `date`
+- every diary photo listed in `_data/diary_photos.yml` exists, and asset file names have no spaces
+- every internal link and image on every page resolves
+- repo files (`subscribers.json`, `Gemfile`, `scripts/`) are not served to visitors
+
+Site check also runs every Monday with no edits, to catch breakage from outside the repo (a CDN library or GitHub Pages changing).
+
 Quick check before pushing (needs only Python):
 
 ```bash
