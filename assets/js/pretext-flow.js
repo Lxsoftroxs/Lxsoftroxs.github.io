@@ -57,7 +57,10 @@
 
     var paras = paragraphs.map(function (p) {
       var text = p.textContent || '';
-      var hasInline = p.querySelector('a, strong, em, code, span, img, abbr');
+      /* Any child element at all (links, <br>, form controls, images) means
+         the paragraph is more than plain text. Re-laying it out would flatten
+         it to its text and delete those elements, so it is left untouched. */
+      var hasInline = p.firstElementChild;
       return {
         el:       p,
         text:     text,
