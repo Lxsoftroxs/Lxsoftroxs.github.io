@@ -1,0 +1,46 @@
+name: Site check
+
+# Fail-safe for edits: builds the site exactly the way GitHub Pages does and
+# opens every page in a real browser, so a change to one section cannot
+# quietly break another. Runs on every pull request and every push to main.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Source checks (CSP, assets, front matter)
+        run: python3 scripts/check_site.py
+
+      - name: Build with the GitHub Pages Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install headless browser
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.49.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Open every page in a browser
+        run: NODE_PATH="$RUNNER_TEMP/pw/node_modules" node scripts/smoke_test.js _site
