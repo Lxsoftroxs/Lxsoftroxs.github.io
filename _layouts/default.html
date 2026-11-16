@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Content Security Policy for XSS Protection -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://utteranc.es https://gc.zgo.at; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://utteranc.es https://api.github.com https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app{% if site.goatcounter_code and site.goatcounter_code != "" %} https://{{ site.goatcounter_code }}.goatcounter.com{% endif %}; frame-src https://utteranc.es;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'inline-speculation-rules' https://cdn.jsdelivr.net https://utteranc.es https://gc.zgo.at; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://utteranc.es https://api.github.com https://ws.audioscrobbler.com https://subscriber-api-lolroxs.vercel.app{% if site.goatcounter_code and site.goatcounter_code != "" %} https://{{ site.goatcounter_code }}.goatcounter.com{% endif %}; frame-src https://utteranc.es;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
   <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -22,6 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <script src="{{ '/assets/js/fail-safe.js' | relative_url }}"></script>
 </head>
 <body class="no-flash">
   <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -35,7 +36,7 @@
   <script defer src="{{ '/assets/js/nav.js' | relative_url }}"></script>
   <script defer src="{{ '/assets/js/footer-subscribe.js' | relative_url }}"></script>
   {%- if site.goatcounter_code and site.goatcounter_code != "" and jekyll.environment == "production" %}
-  <script data-goatcounter="https://{{ site.goatcounter_code }}.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  <script data-goatcounter="https://{{ site.goatcounter_code }}.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
   {%- endif %}
 </body>
 </html>

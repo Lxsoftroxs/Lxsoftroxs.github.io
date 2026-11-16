@@ -2,7 +2,9 @@
 /* Lainchan-Inspired Dark Theme */
 
 /* Critical CSS — prevents flash of unstyled content */
-.no-flash { visibility: hidden; }
+.no-flash { visibility: hidden; animation: no-flash-reveal 0s linear 1.5s forwards; }
+/* Fail-safe: if no-flash.js never runs (blocked, broken, slow), show the page anyway. */
+@keyframes no-flash-reveal { to { visibility: visible; } }
 
 /* Skip link for keyboard/screen-reader users */
 .skip-link {

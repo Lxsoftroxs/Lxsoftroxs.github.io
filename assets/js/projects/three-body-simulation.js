@@ -1,0 +1,114 @@
+(function () {
+  'use strict';
+
+  const container = document.getElementById('three-body-sim');
+  if (!container) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+  container.appendChild(canvas);
+
+  const resetButton = document.createElement('button');
+  resetButton.type = 'button';
+  resetButton.textContent = 'Reset Simulation';
+  resetButton.style.marginTop = '8px';
+  resetButton.addEventListener('click', resetSimulation);
+  container.appendChild(resetButton);
+
+  let W = 600, H = 360;
+  let bodies = [];
+  let resetThreshold = 800; // distance beyond which we reset
+
+  function constrain(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function rand(lo, hi) { return lo + Math.random() * (hi - lo); }
+
+  function resizeCanvas() {
+    const maxW = Math.min((container.clientWidth || 600), 800);
+    W = Math.max(300, maxW);
+    H = Math.round(W * 0.6); // maintain aspect ratio
+    canvas.width = W;
+    canvas.height = H;
+    resetThreshold = Math.max(W, H) * 1.5;
+    // Keep existing bodies inside the new bounds
+    for (const b of bodies) {
+      b.x = constrain(b.x, 0, W);
+      b.y = constrain(b.y, 0, H);
+    }
+  }
+
+  function makeBody(x, y, vx, vy, mass) { return { x, y, vx, vy, mass, ax: 0, ay: 0 }; }
+
+  function resetSimulation() {
+    bodies = [];
+    for (let i = 0; i < 3; i++) {
+      bodies.push(makeBody(
+        rand(W * 0.3, W * 0.7),
+        rand(H * 0.3, H * 0.7),
+        rand(-1, 1),
+        rand(-1, 1),
+        rand(10, 30)
+      ));
+    }
+  }
+
+  function applyGravity(b1, b2) {
+    const G = 1;
+    const rx = b2.x - b1.x;
+    const ry = b2.y - b1.y;
+    const distSq = constrain(rx * rx + ry * ry, 10, 50000);
+    const dist = Math.sqrt(distSq) || 1;
+    const forceMag = (G * b1.mass * b2.mass) / distSq;
+    const fx = (rx / dist) * forceMag;
+    const fy = (ry / dist) * forceMag;
+    b1.ax += fx / b1.mass; b1.ay += fy / b1.mass;
+    b2.ax -= fx / b2.mass; b2.ay -= fy / b2.mass;
+  }
+
+  function step() {
+    // If any body goes too far, reset
+    for (const b of bodies) {
+      if (b.x < -resetThreshold || b.x > W + resetThreshold ||
+          b.y < -resetThreshold || b.y > H + resetThreshold) {
+        resetSimulation();
+        return;
+      }
+    }
+
+    // Gravity between pairs
+    for (let i = 0; i < bodies.length; i++) {
+      for (let j = i + 1; j < bodies.length; j++) {
+        applyGravity(bodies[i], bodies[j]);
+      }
+    }
+
+    // Integrate
+    for (const b of bodies) {
+      b.vx += b.ax; b.vy += b.ay;
+      b.x += b.vx;  b.y += b.vy;
+      b.ax = 0;     b.ay = 0;
+    }
+  }
+
+  function render() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    for (const b of bodies) {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.mass / 2, 0, Math.PI * 2); // p5 ellipse() takes diameter
+      ctx.fill();
+    }
+  }
+
+  function frame() {
+    step();
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  resizeCanvas();
+  resetSimulation();
+  window.addEventListener('resize', resizeCanvas);
+  requestAnimationFrame(frame);
+})();
